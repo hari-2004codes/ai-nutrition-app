@@ -49,7 +49,7 @@ export default function MealLog() {
             <span className="font-semibold text-text-base">Today - {new Date().toLocaleDateString()}</span>
           </div>
           <div className="bg-primary-DEFAULT/50 rounded-2xl px-4 py-2 border border-card-border shadow-xl shadow-card-border/20 text-lg font-semibold text-text-base">
-            Total: {Object.values(meals).flat().reduce((acc, food) => acc + (food.calories || 0), 0)} calories
+            Total: {Object.values(meals).flat().reduce((acc, food) => acc + Number(food.caloriesn), 0)} calories
           </div>
         </div>
       </div>
