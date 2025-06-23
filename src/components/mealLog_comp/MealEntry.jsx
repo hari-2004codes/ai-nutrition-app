@@ -10,12 +10,29 @@ export default function MealEntry({ food }) {
       className="flex items-center justify-between p-4 bg-dark-200/40 rounded-xl border border-card-border hover:border-primary-DEFAULT hover:bg-dark-200/70 transition-colors"
     >
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-gradient-to-r from-primary-DEFAULT to-primary-600 rounded-xl flex items-center justify-center">
-          <span className="text-white font-bold text-lg">🍎</span>
-        </div>
+        {food.imageUrl ? (
+          <div className="w-12 h-12 rounded-xl overflow-hidden">
+            <img 
+              src={food.imageUrl} 
+              alt={food.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="w-12 h-12 bg-gradient-to-r from-primary-DEFAULT to-primary-600 rounded-xl flex items-center justify-center">
+            <span className="text-white font-bold text-lg">🍎</span>
+          </div>
+        )}
         <div>
           <h4 className="font-semibold text-text-base">{food.name}</h4>
-          <p className="text-sm text-text-muted">{food.serving || '1 serving'}</p>
+          <p className="text-sm text-text-muted">
+            {food.serving || `${food.quantity}${food.unit}`}
+            {food.source === 'image' && (
+              <span className="ml-2 bg-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded">
+                Image Recognition
+              </span>
+            )}
+          </p>
         </div>
       </div>
 
@@ -38,4 +55,4 @@ export default function MealEntry({ food }) {
       </div>
     </motion.div>
   );
-}   
+}
