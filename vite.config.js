@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/ai-nutrition-app/',
+  base: '/',
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
@@ -27,6 +27,11 @@ export default defineConfig({
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
+      },
+      '/api/meals': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        secure: false,
       }
     }
   }
