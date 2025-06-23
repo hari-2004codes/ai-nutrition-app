@@ -8,6 +8,7 @@ import ImageUploadModal from "../components/mealLog_comp/ImageUploadModal";
 export default function MealLog() {
   const [selectedMeal, setSelectedMeal] = useState("breakfast");
   const [showFoodSearch, setShowFoodSearch] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
   const [meals, setMeals] = useState({
     breakfast: [],
     lunch: [],
@@ -50,6 +51,21 @@ export default function MealLog() {
     setShowFoodSearch(false);
   };
 
+  const handleImageUploadComplete = (recognizedFoods) => {
+    setMeals((prev) => ({
+      ...prev,
+      [selectedMeal]: [
+        ...prev[selectedMeal],
+        ...recognizedFoods.map((food) => ({
+          ...food,
+          id: Date.now(),
+          serving: `${food.quantity} ${food.unit}`,
+        })),
+      ],
+    }));
+    setShowImageUpload(false);
+  };
+
   return (
     <m.div
       initial={{ opacity: 0, y: 20 }}
@@ -65,21 +81,6 @@ export default function MealLog() {
           Track your daily nutrition intake
         </p>
       </div>
-
-      {/* Message Display */}
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`p-4 rounded-xl border text-center font-medium ${
-            message.includes('✅')
-              ? 'bg-green-500/20 border-green-500/30 text-green-300'
-              : 'bg-red-500/20 border-red-500/30 text-red-300'
-          }`}
-        >
-          {message}
-        </motion.div>
-      )}
 
       {/* Date Selector */}
       <div className="bg-dark-200/50 backdrop-blur-lg rounded-2xl p-6 border border-card-border shadow-xl shadow-card-border/20">
@@ -130,13 +131,22 @@ export default function MealLog() {
             <Utensils className="w-6 h-6" />
             {selectedMeal}
           </h2>
-          <button
-            onClick={() => setShowFoodSearch(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-DEFAULT/50 text-white rounded-xl hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition-colors duration-200 ease-in-out"
-          >
-            <Plus className="w-4 h-4" />
-            Add Food
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowImageUpload(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-dark-300/70 text-white rounded-xl hover:bg-dark-400 hover:shadow-md transition-colors duration-200 ease-in-out"
+            >
+              <Camera className="w-4 h-4" />
+              Add with Image
+            </button>
+            <button
+              onClick={() => setShowFoodSearch(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-DEFAULT/50 text-white rounded-xl hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition-colors duration-200 ease-in-out"
+            >
+              <Plus className="w-4 h-4" />
+              Add Food
+            </button>
+          </div>
         </div>
 
         {meals[selectedMeal].length === 0 ? (
@@ -144,13 +154,22 @@ export default function MealLog() {
             <div className="text-6xl mb-4">🍽️</div>
             <h3 className="text-xl font-semibold text-text-base mb-2">No food logged yet</h3>
             <p className="text-text-muted mb-4">Start tracking your {selectedMeal} to see your nutrition data</p>
-            <button
-              onClick={() => setShowFoodSearch(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary-DEFAULT/50 text-white rounded-xl hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition-colors duration-200 ease-in-out"
-            >
-              <Plus className="w-4 h-4" />
-              Add First Item
-            </button>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => setShowImageUpload(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-dark-300/70 text-white rounded-xl hover:bg-dark-400 hover:shadow-md transition-colors duration-200 ease-in-out"
+              >
+                <Camera className="w-4 h-4" />
+                Add with Image
+              </button>
+              <button
+                onClick={() => setShowFoodSearch(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary-DEFAULT/50 text-white rounded-xl hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition-colors duration-200 ease-in-out"
+              >
+                <Plus className="w-4 h-4" />
+                Add First Item
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -234,6 +253,15 @@ export default function MealLog() {
           onSelect={addFoodToMeal}
         />
       )}
-    </motion.div>
+
+      {/* Image Upload Modal */}
+      {showImageUpload && (
+        <ImageUploadModal
+          isOpen={showImageUpload}
+          onClose={() => setShowImageUpload(false)}
+          onDishesConfirmed={handleImageUploadComplete}
+        />
+      )}
+    </m.div>
   );
 }
