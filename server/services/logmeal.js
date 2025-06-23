@@ -5,9 +5,7 @@ import fs from 'fs';
 const API_URL = 'https://api.logmeal.es/v2';
 
 /**
- * 1️⃣ Segment & recognize dishes from image
- * Endpoint: POST /image/segmentation/complete
- * Returns: imageId, segmentation_results (array of {"dishId","name","prob","subclasses",...})
+ * Segment & recognize dishes from image
  */
 export async function recognizeWithSegmentation(filePath) {
   const form = new FormData();
@@ -26,52 +24,71 @@ export async function recognizeWithSegmentation(filePath) {
       }
     }
   );
+  
   return res.data;
 }
 
 /**
- * 2️⃣ Confirm one or many dishes for a recognized image
- * Endpoint: POST /image/confirm/dish/{model_version}
- * Accepts: imageId, dishId, confirmedClass, source?, food_item_position?
+ * Confirm one or many dishes
  */
 export async function confirmMultipleDishes(imageId, items) {
   const confirmations = [];
+  
   for (const item of items) {
-    const {
-      dishId,
-      confirmedClass,       // [classId, className]
-      source,               // e.g. ['logmeal','user']
-      foodItemPosition      // e.g. [0, 'plate_1']
-    } = item;
+    let confirmedClass, source;
+    
+    // Handle subclass items
+    if (item.subclassIndex !== null && item.parentId && item.parentName) {
+      confirmedClass = [
+        item.dishId,
+        item.name,
+        item.parentId,
+        item.parentName
+      ];
+      source = ["logmeal", "logmeal", "logmeal", "logmeal"];
+    } else {
+      // Handle regular items
+      confirmedClass = [item.dishId, item.name];
+      source = ["logmeal", "logmeal"];
+    }
 
-    const payload = {
+    const confirmationData = {
       imageId,
       confirmedClass,
-      ...(source && { source }),
-      ...(foodItemPosition && { food_item_position: foodItemPosition })
+      source,
+      food_item_position: [
+        item.position,
+        `food_item_${item.position}`
+      ]
     };
 
-    const res = await axios.post(
-      `${API_URL}/image/confirm/dish/v1.0`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          language: 'eng'
+    try {
+      const res = await axios.post(
+        `${API_URL}/image/confirm/dish/v1.0`,
+        confirmationData,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`,
+            "Content-Type": "application/json"
+          }
         }
-      }
-    );
-    confirmations.push(res.data);
+      );
+      confirmations.push(res.data);
+    } catch (error) {
+      console.error(
+        "Confirmation error for dish:",
+        item.name,
+        error.response?.data || error.message
+      );
+      throw error;
+    }
   }
+
   return confirmations;
 }
 
 /**
- * 3️⃣ Retrieve nutrition info for a dish + quantity
- * Endpoint: POST /nutrition/recipe/nutritionalInfo
+ * Get nutrition info
  */
 export async function getNutrition(dishId, quantity, unit = 'g') {
   const body = { dishId, quantity, unit };
@@ -82,9 +99,6 @@ export async function getNutrition(dishId, quantity, unit = 'g') {
       headers: {
         Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`,
         'Content-Type': 'application/json'
-      },
-      params: {
-        language: 'eng'
       }
     }
   );
@@ -92,20 +106,21 @@ export async function getNutrition(dishId, quantity, unit = 'g') {
 }
 
 /**
- * 4️⃣ Fetch full list of available LogMeal dishes
- * Endpoint: GET /dataset/dishes/{model_version}
+ * Get dish metadata
  */
-export async function getAllDishes() {
-  const res = await axios.get(
-    `${API_URL}/dataset/dishes/v1.0`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`
-      },
-      params: {
-        language: 'eng'
+export async function getDishMetadata(dishId) {
+  try {
+    const res = await axios.get(
+      `${API_URL}/dataset/dishes/v1.0/${dishId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`
+        }
       }
-    }
-  );
-  return res.data;
+    );
+    return res.data;
+  } catch (error) {
+    console.error('Dish metadata error:', error);
+    return null;
+  }
 }
