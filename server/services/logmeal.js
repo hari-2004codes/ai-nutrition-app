@@ -33,25 +33,14 @@ export async function recognizeWithSegmentation(filePath) {
  */
 export async function confirmMultipleDishes(imageId, items) {
   const confirmations = [];
-  
+ 
   for (const item of items) {
     let confirmedClass, source;
+   
+    // Always treat as a normal dish (even if subclass)
+    confirmedClass = [item.dishId, item.name];
+    source = ['logmeal', 'other'];
     
-    // Handle subclass items
-    if (item.subclassIndex !== null && item.parentId && item.parentName) {
-      confirmedClass = [
-        item.dishId,
-        item.name,
-        item.parentId,
-        item.parentName
-      ];
-      source = ["logmeal", "logmeal", "logmeal", "logmeal"];
-    } else {
-      // Handle regular items
-      confirmedClass = [item.dishId, item.name];
-      source = ["logmeal", "logmeal"];
-    }
-
     const confirmationData = {
       imageId,
       confirmedClass,
@@ -61,7 +50,7 @@ export async function confirmMultipleDishes(imageId, items) {
         `food_item_${item.position}`
       ]
     };
-
+    
     try {
       const res = await axios.post(
         `${API_URL}/image/confirm/dish/v1.0`,
@@ -83,7 +72,6 @@ export async function confirmMultipleDishes(imageId, items) {
       throw error;
     }
   }
-
   return confirmations;
 }
 
@@ -123,4 +111,19 @@ export async function getDishMetadata(dishId) {
     console.error('Dish metadata error:', error);
     return null;
   }
+}
+
+export async function confirmQuantity(imageId, food_item_position, quantity, unit = 'g') {
+  const body = { imageId, food_item_position, quantity, unit };
+  const res = await axios.post(
+    `${API_URL}/nutrition/confirm/quantity`,
+    body,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  return res.data;
 }
