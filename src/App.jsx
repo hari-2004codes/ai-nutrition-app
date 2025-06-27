@@ -12,6 +12,10 @@ import Onboarding from './pages/Onboarding';
 import LoadingSpinner from './components/general_comp/LoadingSpinner';
 import ErrorBoundary from './components/general_comp/ErrorBoundary';
 
+import AuthModal from './components/AuthModal';
+import {auth} from './firebase'
+import {onAuthStateChanged} from 'firebase/auth'
+
 function App() {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -20,15 +24,26 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const [isLoggedIn, setISLoggedIn] = useState(false);
+
   // Initialize app state
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Check if user has completed onboarding
-        const userData = localStorage.getItem('nutritionUser');
-        setIsOnboarded(userData ? true : false);
-        
-        // Restore sidebar state from localStorage
+        const unsubscribe = onAuthStateChanged(auth, (user)=>{
+          if(user){
+            setISLoggedIn(true);
+
+            const userData = localStorage.getItem('nutritionUser');
+            setIsOnboarded(userData ? true : false);
+            
+          }else{
+            setISLoggedIn(false);
+            setIsOnboarded(false);
+          }
+          setIsLoading(false);
+        })
+
         const savedSidebarState = localStorage.getItem('sidebarCollapsed');
         if (savedSidebarState !== null) {
           setSidebarCollapsed(JSON.parse(savedSidebarState));
@@ -47,11 +62,10 @@ function App() {
         return () => window.removeEventListener('resize', handleResize);
       } catch (error) {
         console.error('Error initializing app:', error);
-        // Don't throw here - let the app continue with default state
-      } 
-      finally {
         setIsLoading(false);
+        // Don't throw here - let the app continue with default state
       }
+    
     };
 
     initializeApp();
@@ -84,6 +98,12 @@ function App() {
     setIsOnboarded(true);
   };
 
+   const handleAuthModalClose = () => {
+    // When the modal closes, the onAuthStateChanged listener should have already updated isLoggedIn
+    // If you need to explicitly re-check or re-render based on this, you can,
+    // but the useEffect with onAuthStateChanged handles it reactively.
+  };
+
   // Custom error boundary handlers
   const handleAppError = () => {
     // Navigate to dashboard on app-level errors
@@ -99,6 +119,15 @@ function App() {
     return (
       <ErrorBoundary onGoHome={handleAppError}>
         <LoadingSpinner />
+      </ErrorBoundary>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <ErrorBoundary onGoHome={handleAppError}>
+        {/* Render AuthModal here. It will close itself on successful login. */}
+        <AuthModal onClose={handleAuthModalClose} />
       </ErrorBoundary>
     );
   }

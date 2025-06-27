@@ -9,7 +9,7 @@ export default function LoadingSpinner({ size = 'medium', text = 'Loading...' })
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="flex flex-col items-center justify-center">
       <motion.div
         className={`${sizeClasses[size]} border-4 border-blue-200 border-t-blue-600 rounded-full`}
         animate={{ rotate: 360 }}
