@@ -4,12 +4,13 @@ import {
   recognizeWithSegmentation,
   confirmMultipleDishes,
   getNutrition,
-  getDishMetadata
+  getDishMetadata,
+  confirmQuantity
 } from '../services/logmeal.js';
 
 const router = express.Router();
 
-// Image segmentation with enhanced error handling
+// Image segmentation
 router.post('/segment', upload.single('image'), async (req, res, next) => {
   try {
     if (!req.file) {
@@ -29,8 +30,6 @@ router.post('/segment', upload.single('image'), async (req, res, next) => {
   }
 });
 
-// ... rest of the file remains unchanged ...
-
 // Confirm dishes
 router.post('/confirm', express.json(), async (req, res, next) => {
   try {
@@ -42,22 +41,22 @@ router.post('/confirm', express.json(), async (req, res, next) => {
   }
 });
 
-router.get('/dishes/:dishId/image', async (req, res) => {
-  try {
-    const dishId = req.params.dishId;
-    const metadata = await getDishMetadata(dishId);
+// router.get('/dishes/:dishId/image', async (req, res) => {
+//   try {
+//     const dishId = req.params.dishId;
+//     const metadata = await getDishMetadata(dishId);
     
-    if (metadata?.imageUrl) {
-      return res.json({ imageUrl: metadata.imageUrl });
-    }
+//     if (metadata?.imageUrl) {
+//       return res.json({ imageUrl: metadata.imageUrl });
+//     }
     
-    // Fallback to generic food image
-    res.json({ imageUrl: null });
-  } catch (error) {
-    console.error('Dish image error:', error);
-    res.json({ imageUrl: null });
-  }
-});
+//     // Fallback to generic food image
+//     res.json({ imageUrl: null });
+//   } catch (error) {
+//     console.error('Dish image error:', error);
+//     res.json({ imageUrl: null });
+//   }
+// });
 
 // Get nutrition
 router.post('/nutrition', express.json(), async (req, res, next) => {
@@ -73,6 +72,16 @@ router.post('/nutrition', express.json(), async (req, res, next) => {
       dishName: metadata?.name || "Unknown Dish",
       dishCategory: metadata?.category || "Other"
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/confirm-quantity', express.json(), async (req, res, next) => {
+  try {
+    const { imageId, food_item_position, quantity, unit } = req.body;
+    const nutrition = await confirmQuantity(imageId, food_item_position, quantity, unit);
+    res.json(nutrition);
   } catch (err) {
     next(err);
   }

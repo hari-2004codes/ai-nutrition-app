@@ -14,7 +14,8 @@ import listEndpoints from 'express-list-endpoints'; // For debugging routes
 
 // Import your route files
 import mealsRouter from './routes/meals.js';
-import path from 'path';
+import mealplansRouter from './routes/mealplans.js';
+
 import authRoutes from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
 import diaryRoutes from './routes/diary.js';
@@ -26,19 +27,18 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Serve static files from previews directory
-app.use('/previews', express.static(path.join(process.cwd(), 'previews')));
-
-// Allow calls from your React dev server
-app.use(cors({ origin: 'http://localhost:5173' }));
-// Middleware for parsing request bodies (MUST come before routes that use req.body)
-app.use(express.json()); // Parses JSON payloads
-app.use(express.urlencoded({ extended: true })); // Parses URL-encoded payloads
+// app.use('/previews', express.static(path.join(process.cwd(), 'previews')));
 
 // Allow CORS for your React dev server
 app.use(cors({ origin: 'http://localhost:3000' }));
 
+// Middleware for parsing request bodies (MUST come before routes that use req.body)
+app.use(express.json()); // Parses JSON payloads
+app.use(express.urlencoded({ extended: true })); // Parses URL-encoded payloads
 // Mount our meals API under /api/meals
 app.use('/api/meals', mealsRouter);
+app.use('/api/mealplans', mealplansRouter);
+
 // Basic health check
 // Connect to the database - rely on connectDB from db.js
 await connectDB(); // This will connect and log inside db.js

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Minus, Plus, X, Utensils } from 'lucide-react';
 
-export default function QuantityInputModal({ isOpen, onClose, dish, onConfirm }) {
+export default function QuantityInputModal({ isOpen, onClose, dish, onConfirm, imageId, food_item_position }) {
   const [quantity, setQuantity] = useState(100);
   const [unit, setUnit] = useState('g');
   const [loading, setLoading] = useState(false);
@@ -13,32 +13,41 @@ export default function QuantityInputModal({ isOpen, onClose, dish, onConfirm })
   const fetchNutritionInfo = useCallback(async (qty, unt) => {
     setLoading(true);
     setError(null);
-    
     try {
-      const res = await axios.post('/api/meals/nutrition', {
-        dishId: dish.dishId,
-        quantity: qty,
-        unit: unt
-      });
-      
-      setNutritionInfo(res.data);
+      let res;
+      if (imageId && food_item_position !== undefined) {
+        res = await axios.post('/api/meals/confirm-quantity', {
+          imageId,
+          quantity: { [food_item_position]: qty },
+          unit: unt
+        });
+        // Find the nutrition info for this food_item_position
+        const itemInfo = res.data.nutritional_info_per_item?.find(
+          item => item.food_item_position === food_item_position
+        );
+        if (!itemInfo || !itemInfo.nutritional_info) {
+          setError('No nutrition info available for this item.');
+          setNutritionInfo(null);
+        } else {
+          setNutritionInfo(itemInfo.nutritional_info);
+        }
+      } else {
+        // fallback to dish-based endpoint (should not be used in segmentation flow)
+        res = await axios.post('/api/meals/nutrition', {
+          dishId: dish.dishId,
+          quantity: qty,
+          unit: unt
+        });
+        setNutritionInfo(res.data);
+      }
     } catch (error) {
       console.error('Nutrition fetch error:', error);
-      setError('Failed to load nutrition data. Using estimated values.');
-      
-      // Fallback nutrition data
-      setNutritionInfo({
-        calories: Math.round(150 * (qty / 100)),
-        nutrients: {
-          protein: Math.round(5 * (qty / 100)),
-          carbohydrate: Math.round(20 * (qty / 100)),
-          fat: Math.round(8 * (qty / 100))
-        }
-      });
+      setError('Failed to load nutrition data from LogMeal.');
+      setNutritionInfo(null);
     } finally {
       setLoading(false);
     }
-  }, [dish?.dishId]);
+  }, [dish?.dishId, imageId, food_item_position]);
 
   useEffect(() => {
     if (isOpen && dish) {
@@ -47,19 +56,8 @@ export default function QuantityInputModal({ isOpen, onClose, dish, onConfirm })
       setNutritionInfo(null);
       setError(null);
       fetchNutritionInfo(100, 'g');
-      
-      // Fetch dish image from LogMeal if available
-      if (dish.dishId) {
-        axios.get(`/api/meals/dishes/${dish.dishId}/image`)
-          .then(res => {
-            if (res.data.imageUrl) {
-              setDishImage(res.data.imageUrl);
-            }
-          })
-          .catch(() => {
-            // Ignore errors for image
-          });
-      }
+      // Remove dish image fetch from /dishes endpoint
+      setDishImage(null);
     }
   }, [isOpen, dish, fetchNutritionInfo]);
 
@@ -84,11 +82,12 @@ export default function QuantityInputModal({ isOpen, onClose, dish, onConfirm })
       quantity,
       unit,
       calories: nutritionInfo?.calories || 0,
-      protein: nutritionInfo?.nutrients?.protein || 0,
-      carbs: nutritionInfo?.nutrients?.carbohydrate || 0,
-      fat: nutritionInfo?.nutrients?.fat || 0,
+      protein: nutritionInfo?.protein || nutritionInfo?.nutrients?.protein || 0,
+      carbs: nutritionInfo?.carbohydrate || nutritionInfo?.nutrients?.carbohydrate || 0,
+      fat: nutritionInfo?.fat || nutritionInfo?.nutrients?.fat || 0,
       source: 'image',
-      imageUrl: dishImage
+      imageUrl: dishImage,
+      nutritionInfo // pass full info for advanced display if needed
     };
     
     onConfirm(food);
@@ -196,15 +195,15 @@ export default function QuantityInputModal({ isOpen, onClose, dish, onConfirm })
                   </div>
                   <div className="bg-dark-200/70 p-3 rounded-lg">
                     <div className="text-text-muted text-sm">Protein</div>
-                    <div className="text-text-base font-semibold">{nutritionInfo.nutrients?.protein || 0}g</div>
+                    <div className="text-text-base font-semibold">{nutritionInfo.protein || 0}g</div>
                   </div>
                   <div className="bg-dark-200/70 p-3 rounded-lg">
                     <div className="text-text-muted text-sm">Carbs</div>
-                    <div className="text-text-base font-semibold">{nutritionInfo.nutrients?.carbohydrate || 0}g</div>
+                    <div className="text-text-base font-semibold">{nutritionInfo.carbohydrate || 0}g</div>
                   </div>
                   <div className="bg-dark-200/70 p-3 rounded-lg">
                     <div className="text-text-muted text-sm">Fat</div>
-                    <div className="text-text-base font-semibold">{nutritionInfo.nutrients?.fat || 0}g</div>
+                    <div className="text-text-base font-semibold">{nutritionInfo.fat || 0}g</div>
                   </div>
                 </div>
               </div>
