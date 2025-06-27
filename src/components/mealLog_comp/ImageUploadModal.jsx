@@ -17,6 +17,8 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
   const [expandedItems, setExpandedItems] = useState({});
   const [error, setError] = useState(null);
   const [subclassesExpanded, setSubclassesExpanded] = useState({});
+  const [userQuantities, setUserQuantities] = useState({});
+  const [userUnits, setUserUnits] = useState({});
 
   useEffect(() => {
     if (isOpen) {
@@ -43,6 +45,8 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
     setStep('upload');
     setExpandedItems({});
     setError(null);
+    setUserQuantities({});
+    setUserUnits({});
   };
 
   const handleFileChange = (e) => {
@@ -97,16 +101,12 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
     
     let selectedName = prediction.name;
     let selectedId = prediction.id;
-    let parentId = null;
-    let parentName = null;
     
     // If a subclass is selected, use its details
     if (subclassIndex !== null && prediction.subclasses && prediction.subclasses[subclassIndex]) {
       const subclass = prediction.subclasses[subclassIndex];
       selectedName = subclass.name;
       selectedId = subclass.id || prediction.id; // fallback to parent id if subclass doesn't have one
-      parentId = prediction.id;
-      parentName = prediction.name;
     }
     
     setSelectedDishes(prev => ({
@@ -117,13 +117,7 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
         position: position,
         predIndex: predIndex,
         subclassIndex: subclassIndex,
-        source: subclassIndex !== null ? 
-          ['logmeal', 'other'] : 
-          ['logmeal', 'other'],
-        ...(subclassIndex !== null && {
-          parentId,
-          parentName
-        })
+        source: ['logmeal', 'other'],
       }
     }));
   };
@@ -171,24 +165,53 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
   };
 
   const handleQuantityConfirm = (food) => {
+    // Save the quantity and unit for this food_item_position
+    setUserQuantities(prev => ({ ...prev, [currentQuantityDish.position]: food.quantity }));
+    setUserUnits(prev => ({ ...prev, [currentQuantityDish.position]: food.unit }));
     const remainingDishes = confirmedDishes.filter(
       dish => dish.dishId !== currentQuantityDish.dishId
     );
-    
     if (remainingDishes.length > 0) {
       setCurrentQuantityDish(remainingDishes[0]);
     } else {
-      onDishesConfirmed(confirmedDishes.map(dish => ({
-        ...food,
-        id: dish.dishId,
-        name: dish.name,
-        source: 'logmeal'
-      })));
-      onClose();
+      // All quantities set, send batch request
+      confirmAllQuantities();
     }
   };
 
-  
+  const confirmAllQuantities = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Send all user quantities in one request
+      const res = await axios.post('/api/meals/confirm-quantity', {
+        imageId,
+        quantity: userQuantities
+      });
+      // Map nutrition info back to confirmedDishes for UI
+      const items = res.data.nutritional_info_per_item || [];
+      const dishesWithNutrition = confirmedDishes.map(dish => {
+        const itemInfo = items.find(item => item.food_item_position === dish.position);
+        const nutritionInfo = itemInfo?.nutritional_info || {};
+        return {
+          ...dish,
+          quantity: userQuantities[dish.position],
+          unit: userUnits[dish.position],
+          calories: nutritionInfo.calories || 0,
+          protein: nutritionInfo.protein || 0,
+          carbs: nutritionInfo.carbohydrate || 0,
+          fat: nutritionInfo.fat || 0,
+          nutritionInfo
+        };
+      });
+      onDishesConfirmed(dishesWithNutrition);
+      onClose();
+    } catch {
+      setError('Failed to confirm all quantities.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -268,8 +291,8 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
                   }`}
                 >
                   {loading ? (
-                    <span className="flex justify-center items-center h-5">
-                      <LoadingSpinner size="small" text="" />
+                    <span className="flex justify-center items-center h-full">
+                      <LoadingSpinner size="small" text="Analyzing Image..." />
                     </span>
                   ) : 'Recognize Food Items'}
                 </button>
@@ -415,7 +438,7 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
                 <div className="pt-4 border-t border-card-border flex justify-between">
                   <button
                     onClick={() => setStep('upload')}
-                    className="px-4 py-2 rounded-xl border border-card-border hover:bg-dark-300/70 transition-colors"
+                    className="px-4 py-2 rounded-xl text-text-base border bg-dark-300/40 border-card-border hover:bg-dark-300/70 transition-colors"
                   >
                     Back
                   </button>
@@ -448,6 +471,8 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
           onClose={onClose}
           dish={currentQuantityDish}
           onConfirm={handleQuantityConfirm}
+          imageId={imageId}
+          food_item_position={currentQuantityDish.position}
         />
       )}
     </>

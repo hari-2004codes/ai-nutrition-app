@@ -1,272 +1,260 @@
 import React, { useState } from "react";
+import axios from 'axios';
 import { motion } from "framer-motion";
 import {
   Calendar,
-  Plus,
   Clock,
-  Users,
   ChefHat,
-  Star,
-  Bookmark,
-  Filter,
-  Search,
+  Heart,
+  Plus,
+  Utensils,
+  Flame,
+  BookOpen
 } from "lucide-react";
 import CreatePlanModal from "../components/mealplan_comp/CreatePlanModal";
+import MealRecipeModal from '../components/mealplan_comp/MealRecipeModal';
+
 export default function MealPlans() {
-  const [selectedPlan, setSelectedPlan] = useState(null);
-  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'calendar'
+  const [selectedMeal, setSelectedMeal] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const mealPlans = [
+  const [mealPlans, setMealPlans] = useState([]);
+  const [selectedMealPlan, setSelectedMealPlan] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const defaultPlans = [
     {
       id: 1,
-      name: "Mediterranean Week",
-      description:
-        "Heart-healthy Mediterranean diet plan with fresh ingredients",
+      name: "Indian Vegetarian Thali",
+      description: "Traditional Indian vegetarian meals with balanced nutrition",
       duration: "7 days",
-      calories: "1,800-2,200",
-      difficulty: "Easy",
+      calories: "1,800-2,000",
+      difficulty: "Moderate",
+      cuisine: "Indian",
       rating: 4.8,
-      image:
-        "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400",
-      tags: ["Mediterranean", "Heart-healthy", "Vegetarian-friendly"],
+      image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg",
+      tags: ["Vegetarian", "Traditional", "Balanced"],
       meals: 21,
+      generated: false
     },
     {
       id: 2,
-      name: "High Protein Muscle Gain",
-      description:
-        "Protein-rich meal plan designed for muscle building and recovery",
+      name: "South Indian Special",
+      description: "Authentic South Indian dishes with rich flavors",
       duration: "5 days",
-      calories: "2,400-2,800",
-      difficulty: "Moderate",
-      rating: 4.9,
-      image:
-        "https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg?auto=compress&cs=tinysrgb&w=400",
-      tags: ["High-protein", "Muscle gain", "Post-workout"],
-      meals: 15,
-    },
-    {
-      id: 3,
-      name: "Plant-Based Power",
-      description: "Complete vegan nutrition plan with balanced macronutrients",
-      duration: "7 days",
-      calories: "1,600-2,000",
+      calories: "2,000-2,200",
       difficulty: "Easy",
-      rating: 4.7,
-      image:
-        "https://images.pexels.com/photos/1640771/pexels-photo-1640771.jpeg?auto=compress&cs=tinysrgb&w=400",
-      tags: ["Vegan", "Plant-based", "Sustainable"],
-      meals: 21,
-    },
-    {
-      id: 4,
-      name: "Keto Fat Burn",
-      description: "Low-carb ketogenic meal plan for effective fat burning",
-      duration: "14 days",
-      calories: "1,500-1,900",
-      difficulty: "Advanced",
-      rating: 4.6,
-      image:
-        "https://images.pexels.com/photos/1640770/pexels-photo-1640770.jpeg?auto=compress&cs=tinysrgb&w=400",
-      tags: ["Keto", "Low-carb", "Fat loss"],
-      meals: 42,
-    },
+      cuisine: "South Indian",
+      rating: 4.9,
+      image: "https://images.pexels.com/photos/4331489/pexels-photo-4331489.jpeg",
+      tags: ["South Indian", "Authentic", "Spicy"],
+      meals: 15,
+      generated: false
+    }
   ];
 
-  const todaysMeals = [
-    {
-      time: "8:00 AM",
-      meal: "Breakfast",
-      name: "Greek Yogurt Parfait",
-      calories: 320,
-      prep: "5 min",
-    },
-    {
-      time: "12:30 PM",
-      meal: "Lunch",
-      name: "Mediterranean Quinoa Bowl",
-      calories: 450,
-      prep: "15 min",
-    },
-    {
-      time: "3:00 PM",
-      meal: "Snack",
-      name: "Almond & Apple Slices",
-      calories: 180,
-      prep: "2 min",
-    },
-    {
-      time: "7:00 PM",
-      meal: "Dinner",
-      name: "Grilled Salmon with Vegetables",
-      calories: 520,
-      prep: "25 min",
-    },
-  ];
+  const handleGeneratePlan = async (formData) => {
+    setIsGenerating(true);
+    
+    try {
+      console.log('Generating meal plan with data:', formData);
+
+      const response = await axios.post('/api/mealplans/generate', formData, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('API Response:', response.data);
+
+      const planData = response.data.data;
+
+      const newPlan = {
+        id: Date.now(),
+        name: formData.name || 'Custom Indian Meal Plan',
+        description: 'AI generated personalized Indian meal plan',
+        duration: `${formData.duration} days`,
+        calories: `${formData.calories}`,
+        difficulty: formData.difficulty.charAt(0).toUpperCase() + formData.difficulty.slice(1),
+        prepTime: `${formData.prepTime} mins`,
+        image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg",
+        tags: formData.mealTypes.map(meal => 
+          meal.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+        ),
+        meals: formData.duration * formData.mealTypes.length,
+        data: planData,
+        rating: 5.0,
+        generated: true
+      };
+
+      setMealPlans(prevPlans => [newPlan, ...prevPlans]);
+      console.log('Meal plan generated successfully:', newPlan);
+      
+      // Show success message
+      alert('Meal plan generated successfully!');
+
+    } catch (error) {
+      console.error("Error generating meal plan:", error);
+      
+      let errorMessage = 'Failed to generate meal plan. ';
+      if (error.response?.data?.message) {
+        errorMessage += error.response.data.message;
+      } else if (error.message) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Please try again.';
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-8"
+      className="p-6 space-y-8"
     >
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold text-text-base mb-2">Meal Plans</h1>
+      {/* Header Section */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-DEFAULT to-primary-600 bg-clip-text text-transparent">
+            Indian Meal Plans
+          </h1>
           <p className="text-text-muted text-lg">
-            Discover and follow personalized meal plans
+            Discover authentic Indian recipes and personalized meal plans
           </p>
         </div>
-
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-DEFAULT/50 text-white rounded-xl hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Create AI-powered Personalized Meal Plan
-          </button>
-        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          disabled={isGenerating}
+          className="flex items-center gap-2 px-6 py-3 bg-primary-DEFAULT text-white rounded-xl hover:bg-primary-600 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-primary-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Plus className="w-5 h-5" />
+          {isGenerating ? 'Generating...' : 'Create Custom Plan'}
+        </button>
       </div>
 
-      {/* Today's Meal Plan */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-dark-200/50 backdrop-blur-lg rounded-2xl p-6 border border-card-border shadow-xl shadow-card-border/20"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-text-base flex items-center gap-2">
-            <Calendar className="w-6 h-6" />
-            Today's Meal Plan
-          </h2>
-          <div className="text-sm text-text-muted">
-            Total: {todaysMeals.reduce((acc, meal) => acc + meal.calories, 0)}{" "}
-            calories
-          </div>
+      {/* Loading State */}
+      {isGenerating && (
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-DEFAULT"></div>
+          <p className="mt-2 text-text-muted">Generating your custom meal plan...</p>
         </div>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {todaysMeals.map((meal, index) => (
-            <motion.div
-              key={meal.meal}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 * index }}
-              className="p-4 bg-dark-300/60 rounded-xl border border-card-border hover:bg-dark-200/70 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-primary-DEFAULT">
-                  {meal.time}
-                </span>
-                <Clock className="w-4 h-4 text-text-muted" />
-              </div>
-              <h4 className="font-semibold text-text-base mb-1">{meal.meal}</h4>
-              <p className="text-sm text-text-muted mb-2">{meal.name}</p>
-              <div className="flex items-center justify-between text-xs text-text-muted">
-                <span>{meal.calories} cal</span>
-                <span>{meal.prep}</span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
       {/* Meal Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mealPlans.map((plan, index) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {[...defaultPlans, ...mealPlans].map((plan, index) => (
           <motion.div
             key={plan.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 * index }}
-            className="bg-dark-200/50 backdrop-blur-lg rounded-2xl overflow-hidden border border-card-border shadow-xl shadow-card-border/20 hover:shadow-2xl hover:shadow-card-border/30 transition-all duration-300 cursor-pointer"
-            onClick={() => setSelectedPlan(plan)}
+            onClick={() => {
+              if (plan.generated) {
+                setSelectedMealPlan(plan);
+              } else {
+                setSelectedMeal(plan);
+              }
+            }}
+            className="group cursor-pointer"
           >
-            {/* Plan Image */}
-            <div className="relative h-48 overflow-hidden">
-              <img
-                src={plan.image}
-                alt={plan.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute top-4 right-4">
-                <button className="p-2 bg-dark-300/60 backdrop-blur-sm rounded-full hover:bg-dark-200/70 transition-colors">
-                  <Bookmark className="w-4 h-4 text-text-muted" />
+            <div className="bg-dark-200 rounded-2xl overflow-hidden border border-card-border hover:border-primary-DEFAULT transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-primary-DEFAULT/10">
+              {/* Image Container */}
+              <div className="relative h-48 overflow-hidden">
+                <img 
+                  src={plan.image} 
+                  alt={plan.name} 
+                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-dark-200 to-transparent opacity-60" />
+                <div className="absolute top-4 right-4 flex items-center gap-2 bg-dark-200/80 backdrop-blur-sm rounded-full px-3 py-1">
+                  <Heart className="w-4 h-4 text-primary-DEFAULT" />
+                  <span className="text-sm font-medium">{plan.rating}</span>
+                </div>
+                {plan.generated && (
+                  <div className="absolute top-4 left-4 bg-primary-DEFAULT/90 backdrop-blur-sm rounded-full px-3 py-1">
+                    <span className="text-xs font-medium text-white">AI Generated</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-4">
+                <div>
+                  <h3 className="text-xl font-bold text-white group-hover:text-primary-DEFAULT transition-colors">
+                    {plan.name}
+                  </h3>
+                  <p className="text-text-muted mt-2 text-sm line-clamp-2">
+                    {plan.description}
+                  </p>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2 text-text-muted">
+                    <Calendar className="w-4 h-4" />
+                    <span className="text-sm">{plan.duration}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-text-muted">
+                    <Flame className="w-4 h-4" />
+                    <span className="text-sm">{plan.calories} cal</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-text-muted">
+                    <ChefHat className="w-4 h-4" />
+                    <span className="text-sm">{plan.difficulty}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-text-muted">
+                    <Utensils className="w-4 h-4" />
+                    <span className="text-sm">{plan.meals} meals</span>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-2">
+                  {plan.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 bg-primary-DEFAULT/10 text-primary-DEFAULT text-xs rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Action Button */}
+                <button className="w-full flex items-center justify-center gap-2 py-3 bg-primary-DEFAULT/10 text-primary-DEFAULT rounded-xl group-hover:bg-primary-DEFAULT group-hover:text-white transition-all duration-300">
+                  <BookOpen className="w-4 h-4" />
+                  View Plan
                 </button>
               </div>
-              <div className="absolute bottom-4 left-4 flex items-center gap-1 bg-dark-300/60 backdrop-blur-sm rounded-full px-2 py-1">
-                <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                <span className="text-sm font-medium text-text-base">
-                  {plan.rating}
-                </span>
-              </div>
-            </div>
-
-            {/* Plan Details */}
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-text-base mb-2">
-                {plan.name}
-              </h3>
-              <p className="text-text-muted text-sm mb-4">{plan.description}</p>
-
-              {/* Plan Stats */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-text-muted" />
-                  <span className="text-sm text-text-muted">
-                    {plan.duration}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-text-muted" />
-                  <span className="text-sm text-text-muted">
-                    {plan.meals} meals
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ChefHat className="w-4 h-4 text-text-muted" />
-                  <span className="text-sm text-text-muted">
-                    {plan.difficulty}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-text-muted" />
-                  <span className="text-sm text-text-muted">
-                    {plan.calories}
-                  </span>
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {plan.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-2 py-1 bg-primary-DEFAULT/20 text-primary-DEFAULT text-xs rounded-full"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              {/* Action Button */}
-              <button className="w-full py-3 bg-primary-DEFAULT/50 text-white rounded-xl hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition-all duration-200">
-                Start Plan
-              </button>
             </div>
           </motion.div>
         ))}
       </div>
+
+      {/* Modals */}
       <CreatePlanModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onGenerate={(data) => {
-          console.log("Generated Meal Plan Form Data:", data);
-          // Call your LLM API integration here later
-        }}
+        onGenerate={handleGeneratePlan}
       />
+
+      {selectedMeal && (
+        <MealRecipeModal
+          meal={selectedMeal}
+          onClose={() => setSelectedMeal(null)}
+        />
+      )}
+
+      {selectedMealPlan && (
+        <MealRecipeModal
+          mealPlan={selectedMealPlan}
+          onClose={() => setSelectedMealPlan(null)}
+        />
+      )}
     </motion.div>
   );
 }
