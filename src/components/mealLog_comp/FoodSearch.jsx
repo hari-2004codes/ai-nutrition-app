@@ -1,235 +1,267 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Plus } from 'lucide-react';
-import { getFoodAutocomplete, getFoodDetails } from '../../services/fatSecretApi';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, X, Loader2, AlertCircle, Plus } from 'lucide-react';
+import { getFoodAutocomplete, getFoodDetails, parseNutritionData } from '../../services/fatSecretApi';
 
 export default function FoodSearch({ onClose, onSelect }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [debugInfo, setDebugInfo] = useState(null);
+  const [error, setError] = useState('');
+  const [selectedFood, setSelectedFood] = useState(null);
+  const [foodDetails, setFoodDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // Debounce search function
+  const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  };
+
+  const searchFoods = async (searchQuery) => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const data = await getFoodAutocomplete(searchQuery);
+      setResults(data || []);
+    } catch (err) {
+      console.error('Search error:', err);
+      setError(err.message || 'Failed to search foods. Please try again.');
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const debouncedSearch = useCallback(debounce(searchFoods, 500), []);
 
   useEffect(() => {
-    const searchTimeout = setTimeout(async () => {
-      if (searchTerm.trim().length > 2) {
-        setLoading(true);
-        setError(null);
-        setDebugInfo(null);
-        
-        try {
-          console.log('Searching for:', searchTerm);
-          const response = await getFoodAutocomplete(searchTerm);
-          console.log('Search response:', response);
-          
-          if (response.foods && response.foods.food) {
-            const foods = Array.isArray(response.foods.food)
-              ? response.foods.food
-              : [response.foods.food];
-            
-            console.log('Processing foods:', foods);
-            
-            // Get details for each food
-            const detailedResults = await Promise.all(
-              foods.map(async (food) => {
-                try {
-                  console.log('Fetching details for:', food.food_name);
-                  const details = await getFoodDetails(food.food_id);
-                  console.log('Food details:', details);
-                  
-                  if (!details.food || !details.food.servings || !details.food.servings.serving) {
-                    console.warn('Invalid food details structure:', details);
-                    return null;
-                  }
+    debouncedSearch(query);
+  }, [query, debouncedSearch]);
 
-                  const serving = Array.isArray(details.food.servings.serving)
-                    ? details.food.servings.serving[0]
-                    : details.food.servings.serving;
+  const handleFoodSelect = async (food) => {
+    setSelectedFood(food);
+    setLoadingDetails(true);
+    setError('');
 
-                  return {
-                    id: food.food_id,
-                    name: food.food_name,
-                    calories: serving.calories || 0,
-                    protein: serving.protein || 0,
-                    carbs: serving.carbohydrate || 0,
-                    fat: serving.fat || 0,
-                    serving: `${serving.metric_serving_amount || 1} ${serving.metric_serving_unit || 'serving'}`
-                  };
-                } catch (error) {
-                  console.error('Error fetching food details:', error);
-                  setDebugInfo(prev => ({
-                    ...prev,
-                    detailsError: error.message,
-                    foodId: food.food_id
-                  }));
-                  return null;
-                }
-              })
-            );
-            
-            const validResults = detailedResults.filter(result => result !== null);
-            console.log('Final processed results:', validResults);
-            setSearchResults(validResults);
-            
-            if (validResults.length === 0) {
-              setDebugInfo(prev => ({
-                ...prev,
-                noValidResults: true,
-                totalFoods: foods.length
-              }));
-            }
-          } else {
-            console.warn('No foods in response:', response);
-            setDebugInfo(prev => ({
-              ...prev,
-              noFoods: true,
-              response
-            }));
-          }
-        } catch (error) {
-          console.error('Error searching foods:', error);
-          setError('Failed to search foods. Please try again.');
-          setDebugInfo(prev => ({
-            ...prev,
-            searchError: error.message,
-            searchTerm
-          }));
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    }, 500);
+    try {
+      const details = await getFoodDetails(food.food_id);
+      const nutritionData = parseNutritionData(details);
+      setFoodDetails(nutritionData);
+    } catch (err) {
+      console.error('Details error:', err);
+      setError(err.message || 'Failed to load food details.');
+      setFoodDetails(null);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
-    return () => clearTimeout(searchTimeout);
-  }, [searchTerm]);
+  const handleAddFood = () => {
+    if (foodDetails) {
+      onSelect(foodDetails);
+      onClose();
+    }
+  };
+
+  const handleBackToSearch = () => {
+    setSelectedFood(null);
+    setFoodDetails(null);
+    setError('');
+  };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-dark-200/50 backdrop-blur-lg rounded-2xl shadow-xl shadow-card-border/20 w-full max-w-2xl max-h-[80vh] overflow-hidden border border-card-border"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="p-6 border-b border-card-border">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-text-base">Add Food</h2>
-              <button
-                onClick={onClose}
-                className="p-2 text-text-muted hover:text-text-base hover:bg-dark-300/60 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-muted" />
-              <input
-                type="text"
-                placeholder="Search for foods..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-dark-300/60 border border-card-border rounded-xl focus:border-primary-DEFAULT focus:ring-2 focus:ring-primary-DEFAULT/20 transition-all duration-200 text-text-base placeholder:text-text-muted"
-                autoFocus
-              />
-            </div>
-          </div>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+          <h2 className="text-xl font-semibold text-white">
+            {selectedFood ? 'Food Details' : 'Search Foods'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
 
-          {/* Debug Info - Only visible in development */}
-          {import.meta.env.DEV && debugInfo && (
-            <div className="p-4 bg-dark-300/60 border-b border-card-border">
-              <h3 className="text-sm font-semibold text-text-base mb-2">Debug Info:</h3>
-              <pre className="text-xs text-text-muted overflow-auto max-h-32">
-                {JSON.stringify(debugInfo, null, 2)}
-              </pre>
+        {!selectedFood ? (
+          <>
+            {/* Search Input */}
+            <div className="p-6 border-b border-gray-700">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search for foods..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  autoFocus
+                />
+              </div>
             </div>
-          )}
 
-          {/* Food List */}
-          <div className="p-6 overflow-y-auto max-h-96">
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-DEFAULT mx-auto"></div>
-                <p className="text-text-muted mt-4">Searching foods...</p>
-              </div>
-            ) : error ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">⚠️</div>
-                <p className="text-text-muted">{error}</p>
-                {import.meta.env.DEV && (
-                  <p className="text-xs text-red-400 mt-2">{debugInfo?.searchError}</p>
-                )}
-              </div>
-            ) : searchResults.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">🔍</div>
-                <p className="text-text-muted">
-                  {searchTerm.trim().length > 2 
-                    ? `No foods found matching "${searchTerm}"`
-                    : 'Start typing to search for foods...'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {searchResults.map((food, index) => (
-                  <motion.div
-                    key={food.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center justify-between p-4 border border-card-border rounded-xl hover:border-primary-DEFAULT hover:bg-dark-300/60 transition-all duration-200"
+            {/* Search Results */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {error && (
+                <div className="flex items-center gap-2 p-4 bg-red-900/50 border border-red-700 rounded-lg mb-4">
+                  <AlertCircle className="w-5 h-5 text-red-400" />
+                  <span className="text-red-200">{error}</span>
+                </div>
+              )}
+
+              {loading && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+                  <span className="ml-2 text-gray-400">Searching...</span>
+                </div>
+              )}
+
+              {!loading && !error && query.length >= 2 && results.length === 0 && (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">🔍</div>
+                  <p className="text-gray-400">No foods found for "{query}"</p>
+                  <p className="text-sm text-gray-500 mt-2">Try different keywords</p>
+                </div>
+              )}
+
+              {!loading && query.length < 2 && (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">🥗</div>
+                  <p className="text-gray-400">Start typing to search for foods</p>
+                  <p className="text-sm text-gray-500 mt-2">Enter at least 2 characters</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {results.map((food, index) => (
+                  <button
+                    key={`${food.food_id}-${index}`}
+                    onClick={() => handleFoodSelect(food)}
+                    className="w-full p-4 bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-600 text-left transition-colors"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-r from-primary-DEFAULT to-primary-600 rounded-xl flex items-center justify-center">
-                        <span className="text-white font-bold">🥗</span>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-text-base">{food.name}</h4>
-                        <p className="text-sm text-text-muted">{food.serving}</p>
-                      </div>
+                    <div className="font-medium text-white">{food.food_name}</div>
+                    {food.brand_name && (
+                      <div className="text-sm text-gray-400 mt-1">{food.brand_name}</div>
+                    )}
+                    <div className="text-xs text-gray-500 mt-2">
+                      {food.food_description || 'Click for nutrition details'}
                     </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="font-bold text-text-base">{food.calories} cal</div>
-                        <div className="text-xs text-text-muted">
-                          P: {food.protein}g • C: {food.carbs}g • F: {food.fat}g
-                        </div>
-                      </div>
-                      
-                      <button
-                        onClick={() => onSelect(food)}
-                        className="p-2 bg-primary-DEFAULT/50 text-white rounded-lg hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </motion.div>
+                  </button>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Food Details */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingDetails && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+                  <span className="ml-2 text-gray-400">Loading details...</span>
+                </div>
+              )}
 
-          {/* Footer */}
-          <div className="p-6 border-t border-card-border bg-dark-300/60">
-            <p className="text-sm text-text-muted text-center">
-              Powered by FatSecret API. Search for any food to get detailed nutritional information.
-            </p>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+              {error && (
+                <div className="flex items-center gap-2 p-4 bg-red-900/50 border border-red-700 rounded-lg mb-4">
+                  <AlertCircle className="w-5 h-5 text-red-400" />
+                  <span className="text-red-200">{error}</span>
+                </div>
+              )}
+
+              {foodDetails && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-2">{foodDetails.name}</h3>
+                    {foodDetails.brand && (
+                      <p className="text-gray-400">{foodDetails.brand}</p>
+                    )}
+                    <p className="text-sm text-gray-500 mt-1">
+                      Serving: {foodDetails.servingDescription}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
+                      <div className="text-2xl font-bold text-white">{foodDetails.calories}</div>
+                      <div className="text-sm text-gray-400">Calories</div>
+                    </div>
+                    <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
+                      <div className="text-2xl font-bold text-white">{foodDetails.protein}g</div>
+                      <div className="text-sm text-gray-400">Protein</div>
+                    </div>
+                    <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
+                      <div className="text-2xl font-bold text-white">{foodDetails.carbs}g</div>
+                      <div className="text-sm text-gray-400">Carbs</div>
+                    </div>
+                    <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
+                      <div className="text-2xl font-bold text-white">{foodDetails.fat}g</div>
+                      <div className="text-sm text-gray-400">Fat</div>
+                    </div>
+                  </div>
+
+                  {(foodDetails.fiber || foodDetails.sugar || foodDetails.sodium) && (
+                    <div className="grid grid-cols-3 gap-4">
+                      {foodDetails.fiber > 0 && (
+                        <div className="bg-gray-800 p-3 rounded-lg border border-gray-600 text-center">
+                          <div className="font-semibold text-white">{foodDetails.fiber}g</div>
+                          <div className="text-xs text-gray-400">Fiber</div>
+                        </div>
+                      )}
+                      {foodDetails.sugar > 0 && (
+                        <div className="bg-gray-800 p-3 rounded-lg border border-gray-600 text-center">
+                          <div className="font-semibold text-white">{foodDetails.sugar}g</div>
+                          <div className="text-xs text-gray-400">Sugar</div>
+                        </div>
+                      )}
+                      {foodDetails.sodium > 0 && (
+                        <div className="bg-gray-800 p-3 rounded-lg border border-gray-600 text-center">
+                          <div className="font-semibold text-white">{foodDetails.sodium}mg</div>
+                          <div className="text-xs text-gray-400">Sodium</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="p-6 border-t border-gray-700 flex gap-3">
+              <button
+                onClick={handleBackToSearch}
+                className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Back to Search
+              </button>
+              {foodDetails && (
+                <button
+                  onClick={handleAddFood}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add to Meal
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

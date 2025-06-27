@@ -46,26 +46,26 @@ export default function Onboarding({ onComplete }) {
   };
 
   return (
-    <div className="min-h-screen bg-dark-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-dark-100 flex items-center justify-center p-4 overflow-x-auto">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl"
+        className="w-full max-w-2xl mx-auto"
       >
         {/* Progress Steps */}
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center space-x-4">
+        <div className="flex justify-center mb-4 sm:mb-8">
+          <div className="flex items-center space-x-1 sm:space-x-4 min-w-max py-2 overflow-x-hidden">
             {steps.map((step, index) => (
               <React.Fragment key={step.id}>
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ${
+                <div className={` flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 sm:w-12 sm:h-12 ${
                   currentStep >= step.id
                     ? 'bg-primary-DEFAULT  text-white shadow-lg shadow-primary/25'
                     : 'bg-dark-200 text-text-muted border-2 border-dark-300'
                 }`}>
-                  <step.icon className="w-5 h-5" />
+                  <step.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-16 h-1 rounded-full transition-all duration-300 ${
+                  <div className={`w-6 h-1 rounded-full transition-all duration-300 sm:w-12 ${
                     currentStep > step.id ? 'bg-primary-DEFAULT' : 'bg-dark-300'
                   }`} />
                 )}
