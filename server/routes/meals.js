@@ -16,11 +16,9 @@ router.post('/segment', upload.single('image'), async (req, res, next) => {
     }
 
     const result = await recognizeWithSegmentation(req.file.path);
-    
-    if (!result.segmentation_results || result.segmentation_results.length === 0) {
+    if (!result.segmentation_results?.length) {
       return res.status(400).json({ error: 'No food items detected' });
     }
-    
     res.json(result);
   } catch (err) {
     console.error('Segmentation error:', err);
@@ -31,30 +29,44 @@ router.post('/segment', upload.single('image'), async (req, res, next) => {
 // Confirm dishes
 router.post('/confirm', express.json(), async (req, res, next) => {
   try {
-    const { imageId, items } = req.body;
-    const confirmed = await confirmMultipleDishes(imageId, items);
+    const { imageId, confirmedClass, source, food_item_position } = req.body;
+    
+    // Validate required fields
+    if (!imageId || !Array.isArray(confirmedClass) || !Array.isArray(source) || !Array.isArray(food_item_position)) {
+      return res.status(400).json({ 
+        error: 'Invalid payload. All fields must be arrays.',
+        received: {
+          confirmedClass: Array.isArray(confirmedClass),
+          source: Array.isArray(source),
+          food_item_position: Array.isArray(food_item_position)
+        }
+      });
+    }
+
+    // Ensure all arrays have the same length
+    if (confirmedClass.length !== source.length || source.length !== food_item_position.length) {
+      return res.status(400).json({ 
+        error: 'Arrays must have the same length',
+        lengths: {
+          confirmedClass: confirmedClass.length,
+          source: source.length,
+          food_item_position: food_item_position.length
+        }
+      });
+    }
+
+    const confirmed = await confirmMultipleDishes(
+      imageId,
+      confirmedClass,
+      source,
+      food_item_position
+    );
     res.json(confirmed);
   } catch (err) {
+    console.error('Confirm error:', err.response?.data || err.message);
     next(err);
   }
 });
-
-// router.get('/dishes/:dishId/image', async (req, res) => {
-//   try {
-//     const dishId = req.params.dishId;
-//     const metadata = await getDishMetadata(dishId);
-    
-//     if (metadata?.imageUrl) {
-//       return res.json({ imageUrl: metadata.imageUrl });
-//     }
-    
-//     // Fallback to generic food image
-//     res.json({ imageUrl: null });
-//   } catch (error) {
-//     console.error('Dish image error:', error);
-//     res.json({ imageUrl: null });
-//   }
-// });
 
 // Get nutrition for the whole image
 router.post('/nutrition', express.json(), async (req, res, next) => {
@@ -67,10 +79,7 @@ router.post('/nutrition', express.json(), async (req, res, next) => {
     res.json(nutrition);
   } catch (err) {
     console.error('Nutrition route error:', err);
-    res.status(500).json({
-      error: 'Failed to get nutrition information',
-      details: err.message,
-    });
+    res.status(500).json({ error: 'Failed to get nutrition information', details: err.message });
   }
 });
 

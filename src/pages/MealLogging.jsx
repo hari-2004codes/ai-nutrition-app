@@ -57,21 +57,21 @@ export default function MealLog() {
       // TODO: Show an error message to the user
       return;
     }
+    
+    const foodNames = nutritionData.foodName.map(fnames => fnames);
 
     const newFoods = nutritionData.nutritional_info_per_item.map(
       (item, index) => {
         const info = item.nutritional_info || {};
         return {
           id: `${Date.now()}-${index}`,
-          name: item.foodName,
+          name: foodNames[index],
           quantity: item.serving_size ? Number(item.serving_size.toFixed(1)) : 0,
           unit: "g",
           calories: info.calories ? Number(info.calories.toFixed(0)) : 0,
-          protein: info.protein_g ? Number(info.protein_g.toFixed(1)) : 0,
-          carbs: info.carbohydrates_total_g
-            ? Number(info.carbohydrates_total_g.toFixed(1))
-            : 0,
-          fat: info.fat_total_g ? Number(info.fat_total_g.toFixed(1)) : 0,
+          protein: info.totalNutrients.PROCNT ? Number(info.totalNutrients.PROCNT.toFixed(1)) : 0,
+          carbs: info.totalNutrients.CHOCDF ? Number(info.totalNutrients.CHOCDF.toFixed(1)) : 0,
+          fat: info.totalNutrients.FAT ? Number(info.totalNutrients.FAT.toFixed(1)) : 0,
           dailyIntakeReference: info.dailyIntakeReference,
         };
       }

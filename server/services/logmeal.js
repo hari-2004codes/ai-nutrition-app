@@ -2,7 +2,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import fs from 'fs';
 
-const API_URL = 'https://api.logmeal.es/v2';
+const API_URL = 'https://api.logmeal.com/v2';
 
 /**
  * Segment & recognize dishes from image
@@ -29,48 +29,52 @@ export async function recognizeWithSegmentation(filePath) {
 }
 
 /**
- * Confirm one or many dishes
+ * Confirm multiple dishes in a single request with correct array formats
  */
-export async function confirmMultipleDishes(imageId, items) {
-  const confirmations = [];
- 
-  for (const item of items) {
+export async function confirmMultipleDishes(imageId, confirmedClass, source, food_item_position) {
+  try {
+    // Build payload matching ConfirmFoodDish schema
     const confirmationData = {
-      imageId: imageId,
-      confirmedClass: [item.dishId, item.name],
-      source: ["logmeal", "other"],
-      food_item_position: [item.position, `extra_dish_${item.position}`]
+      imageId: Number(imageId),
+      confirmedClass: confirmedClass,
+      source: source,
+      food_item_position: food_item_position.map(Number) // Ensure positions are numbers
     };
-    
-    try {
-      const res = await axios.post(
-        `${API_URL}/image/confirm/dish/v1.0`,
-        confirmationData,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`,
-            "Content-Type": "application/json"
-          }
+
+    console.log('Confirming dishes payload:', JSON.stringify(confirmationData, null, 2));
+
+    const res = await axios.post(
+      `${API_URL}/image/confirm/dish/v1.0`,
+      confirmationData,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`,
+          "Content-Type": "application/json"
         }
-      );
-      confirmations.push(res.data);
-    } catch (error) {
-      console.error(
-        "Confirmation error for dish:",
-        item.name,
-        error.response?.data || error.message
-      );
-      throw error;
-    }
+      }
+    );
+    return res.data;
+  } catch (error) {
+    console.error(
+      "Confirmation error for dishes:",
+      error.response?.data || error.message,
+      "Request payload:",
+      JSON.stringify({ imageId, confirmedClass, source, food_item_position }, null, 2)
+    );
+    throw error;
   }
-  return confirmations;
 }
 
 /**
  * Get nutrition info for a whole image
  */
 export async function getNutritionForImage(imageId) {
-  const body = { imageId: Number(imageId) };
+  const body = {
+    imageId: Number(imageId),
+    get_all_nutrients: true,
+    get_nutritional_info_per_item: true,
+    language: 'eng'
+  };
 
   try {
     const res = await axios.post(
@@ -80,81 +84,17 @@ export async function getNutritionForImage(imageId) {
         headers: {
           Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`,
           'Content-Type': 'application/json',
-        },
-        params: {
-          language: 'eng',
-        },
-      }
-    );
-
-    if (!res.data) {
-      console.error('Empty nutrition response from LogMeal');
-      throw new Error('Empty response from LogMeal API');
-    }
-
-    // This is a key part of the response for multi-item images.
-    if (!res.data.nutritional_info_per_item) {
-      console.warn(
-        'LogMeal response did not contain nutritional_info_per_item. The image might not have been segmented or confirmed correctly.',
-        res.data
-      );
-    }
-
-    return res.data;
-  } catch (error) {
-    if (error.response) {
-      const { status, data } = error.response;
-      console.error('LogMeal API error on getNutritionForImage:', {
-        status,
-        data,
-        url: error.config?.url,
-        requestBody: error.config?.data,
-      });
-      if (status === 401) {
-        throw new Error('LogMeal API authentication failed. Check API key.');
-      }
-      if (data?.message) {
-        throw new Error(`LogMeal API error: ${data.message}`);
-      }
-    }
-    throw new Error(`Failed to get nutrition data: ${error.message}`);
-  }
-}
-
-/**
- * Get nutrition info
- */
-export async function getNutrition(dishId, quantity, unit = 'g') {
-  const body = { dishId, quantity, unit };
-  const res = await axios.post(
-    `${API_URL}/nutrition/recipe/nutritionalInfo`,
-    body,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
-  return res.data;
-}
-
-/**
- * Get dish metadata
- */
-export async function getDishMetadata(dishId) {
-  try {
-    const res = await axios.get(
-      `${API_URL}/dataset/dishes/v1.0/${dishId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`
         }
       }
     );
+
+    if (!res.data || !res.data.nutritional_info_per_item) {
+      throw new Error('Failed to get nutrition for all items.');
+    }
+
     return res.data;
   } catch (error) {
-    console.error('Dish metadata error:', error);
-    return null;
+    console.error('Nutrition fetch error:', error.response?.data || error.message);
+    throw error;
   }
-	}
+}
