@@ -95,7 +95,7 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
   const handleDishSelect = (itemIndex, predIndex, subclassIndex = null) => {
     const item = predictions[itemIndex];
     const prediction = item.recognition_results[predIndex];
-    const position = item.food_item_position;
+    const position = itemIndex + 1;
     
     let selectedName = prediction.name;
     let selectedId = prediction.id;
@@ -110,18 +110,18 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
     setSelectedDishes(prev => ({
       ...prev,
       [position]: {
-        dishId: selectedId,
+        dishId: selectedId, // Always use the numeric ID
         name: selectedName,
         position: position,
         predIndex: predIndex,
-        subclassIndex: subclassIndex,        
+        subclassIndex: subclassIndex,
+        source: "logmeal" // Always use logmeal since we're using IDs
       }
     }));
   };
 
   const clearItemSelection = (itemIndex) => {
-    const item = predictions[itemIndex];
-    const position = item.food_item_position;
+    const position = itemIndex + 1;
     
     setSelectedDishes(prev => {
       const newDishes = { ...prev };
@@ -131,15 +131,24 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
   };
 
   const handleManualSelect = (food) => {
+    const position = Object.keys(selectedDishes).length + 1;
+    
     setSelectedDishes(prev => ({
       ...prev,
-      [food.position]: food,
+      [position]: {
+        ...food,
+        position: position
+      },
     }));
   };
 
   const handleConfirm = async () => {
+    if (predictions.length === 0) {
+      setError('No food items detected.');
+      return;
+    }
     if (Object.keys(selectedDishes).length === 0) {
-      setError('Please select at least one dish');
+      setError('Please select at least one dish.');
       return;
     }
 
@@ -147,32 +156,31 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
     setError(null);
 
     try {
-      const dishesArray = Object.values(selectedDishes).sort(
-        (a, b) => a.position - b.position
-      );
+      const dishesArray = Object.values(selectedDishes)
+        .sort((a, b) => a.position - b.position);
+
+      // Build arrays in parallel - each index corresponds to the same food item
+      const payload = {
+        imageId,
+        confirmedClass: dishesArray.map(d => d.dishId), // LogMeal IDs
+        source: dishesArray.map(() => "logmeal"), // All sources are logmeal
+        food_item_position: dishesArray.map(d => d.position) // 1-based positions
+      };
+
+      console.log('Sending confirmation payload:', JSON.stringify(payload, null, 2));
 
       setLoadingText('Confirming dishes...');
-      await axios.post('/api/meals/confirm', {
-        imageId,
-        items: dishesArray,
-      });
+      const confirmResponse = await axios.post('/api/meals/confirm', payload);
+      console.log('Confirm response:', confirmResponse.data);
 
       setLoadingText('Getting nutrition...');
       const nutritionRes = await axios.post('/api/meals/nutrition', { imageId });
-      
-      if (!nutritionRes.data || !nutritionRes.data.nutritional_info_per_item) {
-        throw new Error("Failed to get detailed nutrition information.");
-      }
-      
-      setLoadingText('Adding to your meal log...');
+
       onDishesConfirmed(nutritionRes.data);
       onClose();
-
     } catch (error) {
-      console.error('Confirm and get nutrition error:', error);
-      setError(
-        'Failed to get nutrition for the meal. Please try again or select different items.'
-      );
+      console.error('Confirm error:', error.response?.data || error.message);
+      setError('Failed to confirm dishes. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -283,7 +291,7 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
                   <h3 className="text-lg font-semibold text-text-base">Confirm Items</h3>
                   <div className="space-y-3 max-h-[60vh] md:max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
                     {predictions.map((item, itemIndex) => {
-                      const position = item.food_item_position;
+                      const position = itemIndex + 1;
                       const selectedDish = selectedDishes[position];
 
                       return (
