@@ -147,17 +147,20 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
       setError('No food items detected.');
       return;
     }
-    if (Object.keys(selectedDishes).length === 0) {
-      setError('Please select at least one dish.');
-      return;
-    }
 
+    // Remove validation that requires at least one dish
     setLoading(true);
     setError(null);
 
     try {
       const dishesArray = Object.values(selectedDishes)
         .sort((a, b) => a.position - b.position);
+
+      // If no dishes selected, close the modal
+      if (dishesArray.length === 0) {
+        onClose();
+        return;
+      }
 
       // Build arrays in parallel - each index corresponds to the same food item
       const payload = {
@@ -176,14 +179,20 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
       setLoadingText('Getting nutrition...');
       const nutritionRes = await axios.post('/api/meals/nutrition', { imageId });
 
-      onDishesConfirmed(nutritionRes.data);
-      onClose();
+      if (nutritionRes.data) {
+        onDishesConfirmed(nutritionRes.data);
+      } else {
+        throw new Error('No nutrition data received');
+      }
     } catch (error) {
       console.error('Confirm error:', error.response?.data || error.message);
-      setError('Failed to confirm dishes. Please try again.');
-    } finally {
+      setError(error.response?.data?.error || error.message || 'Failed to confirm dishes. Please try again.');
       setLoading(false);
+      return; // Don't close modal on error
     }
+    
+    setLoading(false);
+    onClose(); // Only close after successful completion
   };
 
   if (!isOpen) return null;
