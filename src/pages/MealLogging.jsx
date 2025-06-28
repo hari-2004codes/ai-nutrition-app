@@ -54,28 +54,31 @@ export default function MealLog() {
     if (!nutritionData || !nutritionData.nutritional_info_per_item) {
       console.error("Invalid nutrition data received:", nutritionData);
       setShowImageUpload(false);
-      // TODO: Show an error message to the user
       return;
     }
     
-    const foodNames = nutritionData.foodName.map(fnames => fnames);
-
-    const newFoods = nutritionData.nutritional_info_per_item.map(
-      (item, index) => {
-        const info = item.nutritional_info || {};
-        return {
-          id: `${Date.now()}-${index}`,
-          name: foodNames[index],
-          quantity: item.serving_size ? Number(item.serving_size.toFixed(1)) : 0,
-          unit: "g",
-          calories: info.calories ? Number(info.calories.toFixed(0)) : 0,
-          protein: info.totalNutrients.PROCNT ? Number(info.totalNutrients.PROCNT.toFixed(1)) : 0,
-          carbs: info.totalNutrients.CHOCDF ? Number(info.totalNutrients.CHOCDF.toFixed(1)) : 0,
-          fat: info.totalNutrients.FAT ? Number(info.totalNutrients.FAT.toFixed(1)) : 0,
-          dailyIntakeReference: info.dailyIntakeReference,
-        };
-      }
-    );
+    const newFoods = nutritionData.nutritional_info_per_item.map((item, index) => {
+      const info = item.nutritional_info || {};
+      const nutrients = info.totalNutrients || {};
+      const dailyRef = info.dailyIntakeReference || {};
+      
+      return {
+        id: `${Date.now()}-${index}`,
+        name: nutritionData.foodName?.[index] || `Food Item ${index + 1}`,
+        quantity: item.serving_size || 100,
+        unit: "g",
+        calories: info.calories ? Number(info.calories.toFixed(0)) : 0,
+        protein: nutrients.PROCNT ? Number(nutrients.PROCNT.quantity.toFixed(1)) : 0,
+        carbs: nutrients.CHOCDF ? Number(nutrients.CHOCDF.quantity.toFixed(1)) : 0,
+        fat: nutrients.FAT ? Number(nutrients.FAT.quantity.toFixed(1)) : 0,
+        dailyIntakeReference: {
+          calories: dailyRef.ENERC_KCAL?.level || 'NONE',
+          protein: dailyRef.PROCNT?.level || 'NONE',
+          carbs: dailyRef.CHOCDF?.level || 'NONE',
+          fat: dailyRef.FAT?.level || 'NONE'
+        }
+      };
+    });
 
     setMeals((prev) => ({
       ...prev,
