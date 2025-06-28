@@ -21,35 +21,78 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [isLoggedIn, setISLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Initialize app state
+  // Helper function to safely check localStorage
+  const hasValidUserData = () => {
+    try {
+      const nutritionUser = localStorage.getItem('nutritionUser');
+      const user = localStorage.getItem('user');
+      
+      // Check if either exists and is valid JSON (not "undefined" or "null" strings)
+      if (nutritionUser && nutritionUser !== "undefined" && nutritionUser !== "null" && nutritionUser !== "{}") {
+        const parsed = JSON.parse(nutritionUser);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return true;
+        }
+      }
+      
+      if (user && user !== "undefined" && user !== "null" && user !== "{}") {
+        const parsed = JSON.parse(user);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking localStorage:', error);
+      // Clear corrupted data
+      localStorage.removeItem('nutritionUser');
+      localStorage.removeItem('user');
+      return false;
+    }
+  };
+
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        const unsubscribe = onAuthStateChanged(auth, (user)=>{
-          if(user){
-            setISLoggedIn(true);
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          if (firebaseUser) {
+            console.log('User logged in:', firebaseUser);
+            setIsLoggedIn(true);
+            setUser(firebaseUser);
 
-            const userData = localStorage.getItem('nutritionUser');
-            setIsOnboarded(userData ? true : false);
+            // Check if user has completed onboarding
+            if (hasValidUserData()) {
+              setIsOnboarded(true);
+            } else {
+              setIsOnboarded(false);
+            }
             
-          }else{
-            setISLoggedIn(false);
+          } else {
+            console.log('User logged out');
+            setIsLoggedIn(false);
+            setUser(null);
             setIsOnboarded(false);
+            
+            // Clear user data from localStorage
+            localStorage.removeItem('nutritionUser');
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
           }
           setIsLoading(false);
-        })
+        });
 
         const savedSidebarState = localStorage.getItem('sidebarCollapsed');
         if (savedSidebarState !== null) {
           setSidebarCollapsed(JSON.parse(savedSidebarState));
         }
         
-        // Auto-collapse sidebar on mobile
         const handleResize = () => {
           if (window.innerWidth < 1024) {
             setSidebarCollapsed(true);
@@ -59,59 +102,59 @@ function App() {
         handleResize();
         window.addEventListener('resize', handleResize);
         
-        return () => window.removeEventListener('resize', handleResize);
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          unsubscribe(); // Clean up the auth listener
+        };
       } catch (error) {
         console.error('Error initializing app:', error);
         setIsLoading(false);
-        // Don't throw here - let the app continue with default state
       }
-    
     };
 
     initializeApp();
   }, []);
 
-  // Handle sidebar toggle
   const handleSidebarToggle = () => {
     try {
       const newState = !sidebarCollapsed;
       setSidebarCollapsed(newState);
       localStorage.setItem('sidebarCollapsed', JSON.stringify(newState));
     } catch (error) {
-      // Fallback if localStorage fails
       console.warn('Failed to save sidebar state:', error);
       setSidebarCollapsed(!sidebarCollapsed);
     }
   };
 
-  // Handle mobile sidebar toggle
   const handleMobileSidebarToggle = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Close mobile sidebar on route change
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  const handleOnboardingComplete = () => {
-    setIsOnboarded(true);
+  const handleOnboardingComplete = (userData) => {
+    // Save user data to localStorage to mark as onboarded
+    if (userData && typeof userData === 'object') {
+      localStorage.setItem('nutritionUser', JSON.stringify(userData));
+      setIsOnboarded(true);
+    } else {
+      console.error('Invalid user data provided to onboarding complete');
+    }
   };
 
-   const handleAuthModalClose = () => {
-    // When the modal closes, the onAuthStateChanged listener should have already updated isLoggedIn
-    // If you need to explicitly re-check or re-render based on this, you can,
-    // but the useEffect with onAuthStateChanged handles it reactively.
+  const handleAuthModalClose = () => {
+    // The onAuthStateChanged listener handles the state updates
+    // This is just for manual modal closing if needed
   };
 
   // Custom error boundary handlers
   const handleAppError = () => {
-    // Navigate to dashboard on app-level errors
     navigate('/dashboard', { replace: true });
   };
 
   const handleRouteError = () => {
-    // Navigate to dashboard on route-level errors
     navigate('/dashboard', { replace: true });
   };
 
@@ -126,7 +169,6 @@ function App() {
   if (!isLoggedIn) {
     return (
       <ErrorBoundary onGoHome={handleAppError}>
-        {/* Render AuthModal here. It will close itself on successful login. */}
         <AuthModal onClose={handleAuthModalClose} />
       </ErrorBoundary>
     );

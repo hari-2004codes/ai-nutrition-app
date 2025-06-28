@@ -26,10 +26,40 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
+    // Helper function to safely parse localStorage data
+    const safeParseJSON = (value) => {
+      if (!value || value === "undefined" || value === "null" || value === "{}") {
+        return null;
+      }
+      try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+      } catch {
+        return null;
+      }
+    };
+
+    // Try to get user data from localStorage
     const stored = localStorage.getItem("nutritionUser");
-    if (stored) {
-      setUserData(JSON.parse(stored));
+    const parsedData = safeParseJSON(stored);
+    
+    if (parsedData) {
+      setUserData(parsedData);
+      return;
     }
+
+    // Fallback: try the 'user' key
+    const userStored = localStorage.getItem("user");
+    const parsedUserData = safeParseJSON(userStored);
+    
+    if (parsedUserData) {
+      setUserData(parsedUserData);
+      return;
+    }
+
+    // No valid data found - set empty object
+    console.log("No valid user data found in localStorage");
+    setUserData({});
   }, []);
 
   const stats = [
@@ -77,7 +107,7 @@ export default function Dashboard() {
           transition={{ delay: 0.1 }}
           className="text-4xl font-bold text-white mb-2"
         >
-          Welcome back, {userData.name || "User"}!
+          Welcome back, {userData.name || userData.displayName || "User"}!
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: -20 }}

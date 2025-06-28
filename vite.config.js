@@ -8,6 +8,11 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        secure: false,
+      },
       '/api/fatsecret': {
         target: 'https://platform.fatsecret.com/rest/server.api',
         changeOrigin: true,
@@ -38,6 +43,7 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       }
+
     }
   }
 })

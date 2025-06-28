@@ -18,7 +18,7 @@ import mealplansRouter from './routes/mealplans.js';
 
 import authRoutes from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
-import diaryRoutes from './routes/diary.js';
+import diaryRoutes from './routes/diaryRoutes.js';
 import progressRoutes from './routes/progress.js';
 import foodRoutes from './routes/foodRoutes.js';
 
