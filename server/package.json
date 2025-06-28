@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
+  "proxy": "http://localhost:4000",
   "scripts": {
     "test": "nodemon index.js",
     "start": "node index.js"
@@ -26,4 +27,5 @@
     "multer": "^2.0.1",
     "sharp": "^0.34.2"
   }
+  
 }

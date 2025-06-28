@@ -29,20 +29,23 @@ const PORT = process.env.PORT || 4000;
 // Serve static files from previews directory
 // app.use('/previews', express.static(path.join(process.cwd(), 'previews')));
 
-// Allow CORS for your React dev server
-app.use(cors({ origin: 'http://localhost:3000' }));
+// FIXED: Allow CORS for both common React dev server ports
+app.use(cors({ 
+  origin: [
+    'http://localhost:3000',  // Create React App default
+    'http://localhost:5173',  // Vite default
+    'http://127.0.0.1:5173',  // Alternative localhost
+    'http://localhost:5174'   // Alternative Vite port
+  ],
+  credentials: true
+}));
 
 // Middleware for parsing request bodies (MUST come before routes that use req.body)
 app.use(express.json()); // Parses JSON payloads
 app.use(express.urlencoded({ extended: true })); // Parses URL-encoded payloads
-// Mount our meals API under /api/meals
-app.use('/api/meals', mealsRouter);
-app.use('/api/mealplans', mealplansRouter);
 
-// Basic health check
 // Connect to the database - rely on connectDB from db.js
 await connectDB(); // This will connect and log inside db.js
-
 
 // --- Define all your routes and middleware HERE ---
 
@@ -57,15 +60,15 @@ app.get('/__test_route', (req, res) => {
 });
 // !!! END DIAGNOSTIC ROUTE !!!
 
-
 // Mount your API routes
 // Ensure mealsRouter, authRoutes, profileRoutes are actual Express Router instances
 app.use('/api/meals', mealsRouter);
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
-app.use("/api/diary",diaryRoutes);
-app.use('/api/progress',progressRoutes);
+app.use("/api/diary", diaryRoutes);
+app.use('/api/progress', progressRoutes);
 app.use('/api/food', foodRoutes);
+app.use('/api/mealplans', mealplansRouter);
 
 // --- Now, list the endpoints (after they've been defined) ---
 console.log("Registered routes:");
@@ -76,13 +79,11 @@ console.table(endpoints.map(e => ({
     path:   e.path
 })));
 
-
 // Central error handler (MUST be the last middleware)
 app.use((err, req, res, next) => {
   console.error(err.stack); // Log the full stack trace for better debugging
   res.status(500).json({ error: err.message || "Internal Server Error" });
 });
-
 
 // Start the server
 app.listen(PORT, () =>
