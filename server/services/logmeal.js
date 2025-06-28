@@ -35,20 +35,11 @@ export async function confirmMultipleDishes(imageId, items) {
   const confirmations = [];
  
   for (const item of items) {
-    let confirmedClass, source;
-   
-    // Always treat as a normal dish (even if subclass)
-    confirmedClass = [item.dishId, item.name];
-    source = ['logmeal', 'other'];
-    
     const confirmationData = {
-      imageId,
-      confirmedClass,
-      source,
-      food_item_position: [
-        item.position,
-        `food_item_${item.position}`
-      ]
+      imageId: imageId,
+      confirmedClass: [item.dishId, item.name],
+      source: ["logmeal", "other"],
+      food_item_position: [item.position, `extra_dish_${item.position}`]
     };
     
     try {
@@ -73,6 +64,61 @@ export async function confirmMultipleDishes(imageId, items) {
     }
   }
   return confirmations;
+}
+
+/**
+ * Get nutrition info for a whole image
+ */
+export async function getNutritionForImage(imageId) {
+  const body = { imageId: Number(imageId) };
+
+  try {
+    const res = await axios.post(
+      `${API_URL}/nutrition/recipe/nutritionalInfo`,
+      body,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        params: {
+          language: 'eng',
+        },
+      }
+    );
+
+    if (!res.data) {
+      console.error('Empty nutrition response from LogMeal');
+      throw new Error('Empty response from LogMeal API');
+    }
+
+    // This is a key part of the response for multi-item images.
+    if (!res.data.nutritional_info_per_item) {
+      console.warn(
+        'LogMeal response did not contain nutritional_info_per_item. The image might not have been segmented or confirmed correctly.',
+        res.data
+      );
+    }
+
+    return res.data;
+  } catch (error) {
+    if (error.response) {
+      const { status, data } = error.response;
+      console.error('LogMeal API error on getNutritionForImage:', {
+        status,
+        data,
+        url: error.config?.url,
+        requestBody: error.config?.data,
+      });
+      if (status === 401) {
+        throw new Error('LogMeal API authentication failed. Check API key.');
+      }
+      if (data?.message) {
+        throw new Error(`LogMeal API error: ${data.message}`);
+      }
+    }
+    throw new Error(`Failed to get nutrition data: ${error.message}`);
+  }
 }
 
 /**
@@ -111,19 +157,4 @@ export async function getDishMetadata(dishId) {
     console.error('Dish metadata error:', error);
     return null;
   }
-}
-
-export async function confirmQuantity(imageId, food_item_position, quantity, unit = 'g') {
-  const body = { imageId, food_item_position, quantity, unit };
-  const res = await axios.post(
-    `${API_URL}/nutrition/confirm/quantity`,
-    body,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.LOGMEAL_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
-  return res.data;
-}
+	}
