@@ -3,9 +3,7 @@ import { upload } from '../middleware/upload.js';
 import {
   recognizeWithSegmentation,
   confirmMultipleDishes,
-  getNutrition,
-  getDishMetadata,
-  confirmQuantity
+  getNutritionForImage,
 } from '../services/logmeal.js';
 
 const router = express.Router();
@@ -58,32 +56,21 @@ router.post('/confirm', express.json(), async (req, res, next) => {
 //   }
 // });
 
-// Get nutrition
+// Get nutrition for the whole image
 router.post('/nutrition', express.json(), async (req, res, next) => {
   try {
-    const { dishId, quantity, unit } = req.body;
-    const nutrition = await getNutrition(dishId, quantity, unit);
-    
-    // Get dish metadata
-    const metadata = await getDishMetadata(dishId);
-    
-    res.json({
-      ...nutrition,
-      dishName: metadata?.name || "Unknown Dish",
-      dishCategory: metadata?.category || "Other"
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post('/confirm-quantity', express.json(), async (req, res, next) => {
-  try {
-    const { imageId, food_item_position, quantity, unit } = req.body;
-    const nutrition = await confirmQuantity(imageId, food_item_position, quantity, unit);
+    const { imageId } = req.body;
+    if (!imageId) {
+      return res.status(400).json({ error: 'imageId is required' });
+    }
+    const nutrition = await getNutritionForImage(imageId);
     res.json(nutrition);
   } catch (err) {
-    next(err);
+    console.error('Nutrition route error:', err);
+    res.status(500).json({
+      error: 'Failed to get nutrition information',
+      details: err.message,
+    });
   }
 });
 

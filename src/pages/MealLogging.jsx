@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { motion as m } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, Search, Clock, Utensils, Camera } from "lucide-react";
-import MealEntry from "../components/mealLog_comp/MealEntry";
 import FoodSearch from "../components/mealLog_comp/FoodSearch";
 import ImageUploadModal from "../components/mealLog_comp/ImageUploadModal";
 
@@ -51,23 +50,42 @@ export default function MealLog() {
     setShowFoodSearch(false);
   };
 
-  const handleImageUploadComplete = (recognizedFoods) => {
+  const handleImageUploadComplete = (nutritionData) => {
+    if (!nutritionData || !nutritionData.nutritional_info_per_item) {
+      console.error("Invalid nutrition data received:", nutritionData);
+      setShowImageUpload(false);
+      // TODO: Show an error message to the user
+      return;
+    }
+
+    const newFoods = nutritionData.nutritional_info_per_item.map(
+      (item, index) => {
+        const info = item.nutritional_info || {};
+        return {
+          id: `${Date.now()}-${index}`,
+          name: item.foodName,
+          quantity: item.serving_size ? Number(item.serving_size.toFixed(1)) : 0,
+          unit: "g",
+          calories: info.calories ? Number(info.calories.toFixed(0)) : 0,
+          protein: info.protein_g ? Number(info.protein_g.toFixed(1)) : 0,
+          carbs: info.carbohydrates_total_g
+            ? Number(info.carbohydrates_total_g.toFixed(1))
+            : 0,
+          fat: info.fat_total_g ? Number(info.fat_total_g.toFixed(1)) : 0,
+          dailyIntakeReference: info.dailyIntakeReference,
+        };
+      }
+    );
+
     setMeals((prev) => ({
       ...prev,
-      [selectedMeal]: [
-        ...prev[selectedMeal],
-        ...recognizedFoods.map((food) => ({
-          ...food,
-          id: Date.now(),
-          serving: `${food.quantity} ${food.unit}`,
-        })),
-      ],
+      [selectedMeal]: [...prev[selectedMeal], ...newFoods],
     }));
     setShowImageUpload(false);
   };
 
   return (
-    <m.div
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="max-w-6xl mx-auto space-y-8"
@@ -174,14 +192,49 @@ export default function MealLog() {
         ) : (
           <div className="space-y-4">
             {meals[selectedMeal].map((food, index) => (
-              <m.div
+              <motion.div
                 key={food.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
+                className="bg-dark-300/50 rounded-xl p-4 border border-card-border"
               >
-                <MealEntry food={food} />
-              </m.div>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-semibold text-text-base">{food.name}</h3>
+                    <p className="text-sm text-text-muted">
+                      {food.quantity} {food.unit}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold text-text-base">{food.calories} kcal</div>
+                    {food.dailyIntakeReference?.calories && (
+                      <div className={`text-xs px-2 py-1 rounded-full ${
+                        food.dailyIntakeReference.calories === 'LOW' ? 'bg-green-500/20 text-green-300' :
+                        food.dailyIntakeReference.calories === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-300' :
+                        'bg-red-500/20 text-red-300'
+                      }`}>
+                        {food.dailyIntakeReference.calories} daily intake
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-dark-200/50 p-2 rounded-lg text-center">
+                    <div className="text-sm text-text-muted">Protein</div>
+                    <div className="font-semibold text-text-base">{food.protein}g</div>
+                  </div>
+                  <div className="bg-dark-200/50 p-2 rounded-lg text-center">
+                    <div className="text-sm text-text-muted">Carbs</div>
+                    <div className="font-semibold text-text-base">{food.carbs}g</div>
+                  </div>
+                  <div className="bg-dark-200/50 p-2 rounded-lg text-center">
+                    <div className="text-sm text-text-muted">Fat</div>
+                    <div className="font-semibold text-text-base">{food.fat}g</div>
+                  </div>
+                </div>
+              </motion.div>
             ))}
 
             {/* Meal Summary */}
@@ -262,6 +315,6 @@ export default function MealLog() {
           onDishesConfirmed={handleImageUploadComplete}
         />
       )}
-    </m.div>
+    </motion.div>
   );
 }
