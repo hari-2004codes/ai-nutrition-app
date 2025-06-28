@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/SideBar';
-import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/DashBoard';
 import Profile from './pages/Profile';
 import MealLog from './pages/MealLogging';
 import MealPlans from './pages/MealPlans';

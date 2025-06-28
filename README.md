@@ -1,7 +1,5 @@
-# Bolt Nutrition App
 
 A modern nutrition tracking application with image-based food recognition capabilities.
-
 ## Features
 
 - Track daily meals and nutrition intake
