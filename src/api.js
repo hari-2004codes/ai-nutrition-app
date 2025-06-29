@@ -18,4 +18,20 @@ api.interceptors.request.use(config => {
   return config;
 });
 
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle 401 errors (unauthorized) - clear token and redirect to login
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("nutritionUser");
+      // You might want to redirect to login here
+      console.log("Session expired, please login again");
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
