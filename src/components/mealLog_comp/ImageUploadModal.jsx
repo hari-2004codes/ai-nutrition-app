@@ -207,6 +207,7 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
               <h2 className="text-xl font-bold text-text-base">
                 {step === 'upload' && 'Upload Meal Image'}
                 {step === 'select' && 'Confirm Food Items'}
+                {step === 'manual' && 'Add Food Manually'}
               </h2>
               <button 
                 onClick={onClose}

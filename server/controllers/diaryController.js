@@ -133,3 +133,73 @@ export const getMeals = async (req, res) => {
     res.status(500).json({ msg: "Could not fetch meals", error: err.message });
   }
 };
+
+export const updateMeal = async (req, res) => {
+  try {
+    const { mealId } = req.params;
+    const userId = req.user.userId;
+    
+    // Verify meal belongs to user
+    const meal = await MealEntry.findOne({ _id: mealId, user: userId });
+    if (!meal) {
+      return res.status(404).json({ msg: "Meal not found or unauthorized" });
+    }
+    
+    // Update the meal
+    const updatedMeal = await MealEntry.findByIdAndUpdate(
+      mealId,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    ).populate('items.food');
+    
+    res.json(updatedMeal);
+  } catch (err) {
+    console.error("Update Meal Error:", err);
+    res.status(500).json({ msg: "Could not update meal", error: err.message });
+  }
+};
+
+export const deleteMeal = async (req, res) => {
+  try {
+    const { mealId } = req.params;
+    const userId = req.user.userId;
+    
+    // Verify meal belongs to user
+    const meal = await MealEntry.findOne({ _id: mealId, user: userId });
+    if (!meal) {
+      return res.status(404).json({ msg: "Meal not found or unauthorized" });
+    }
+    
+    await MealEntry.findByIdAndDelete(mealId);
+    res.json({ msg: "Meal deleted successfully" });
+  } catch (err) {
+    console.error("Delete Meal Error:", err);
+    res.status(500).json({ msg: "Could not delete meal", error: err.message });
+  }
+};
+
+export const getMealsByDateRange = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { startDate, endDate } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ msg: "Start date and end date are required" });
+    }
+    
+    const meals = await MealEntry.find({
+      user: userId,
+      date: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      }
+    })
+    .populate('items.food')
+    .sort({ date: -1, createdAt: -1 });
+    
+    res.json(meals);
+  } catch (err) {
+    console.error("Get Meals by Date Range Error:", err);
+    res.status(500).json({ msg: "Could not fetch meals", error: err.message });
+  }
+};
