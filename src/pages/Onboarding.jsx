@@ -4,6 +4,9 @@ import { ChevronRight, ChevronLeft, Target, Activity, User, Apple, Trophy } from
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { calculateBMR, calculateMacroTargets, calculateTDEE } from '../utils/calculations';
+import { auth } from '../firebase'; // Import Firebase auth
+import authService from '../services/authService'; // Import auth service
+import mealPlanService from '../services/mealPlanService'; // Import meal plan service
 
 const steps = [
   { id: 1, title: 'Personal Info', icon: User },
@@ -16,33 +19,164 @@ const steps = [
 export default function Onboarding({ onComplete }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({});
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { register, handleSubmit, formState: { errors }, watch } = useForm();
+
+  // Watch all form values to update the preview in step 5
+  const watchedData = watch();
 
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
-  const onSubmit = (data) => {
+  const saveProfileToDatabase = async (profileData) => {
+    try {
+      console.log('🔄 Starting profile save process...');
+      
+      // Get the current Firebase user and their ID token
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.error('❌ No authenticated Firebase user found');
+        throw new Error('No authenticated user found');
+      }
+
+      console.log('✅ Firebase user found:', currentUser.uid);
+
+      // Get a fresh ID token from Firebase
+      const idToken = await currentUser.getIdToken();
+      console.log('✅ Got Firebase ID token');
+      
+      // Check if we have a backend token, if not sync with backend
+      if (!authService.getToken()) {
+        console.log('🔄 No backend token found, syncing with backend...');
+        try {
+          await authService.syncWithBackend(idToken);
+          console.log('✅ Backend token synced successfully');
+        } catch (syncError) {
+          console.error('❌ Backend sync failed:', syncError);
+          throw new Error(`Backend sync failed: ${syncError.message}`);
+        }
+      }
+
+      console.log('🔄 Saving profile data:', profileData);
+
+      // Now save the profile using the auth service
+      const savedProfile = await authService.updateProfile(profileData);
+
+      console.log('✅ Profile saved successfully:', savedProfile);
+      return savedProfile;
+    } catch (error) {
+      console.error('❌ Error in saveProfileToDatabase:', error);
+      throw error;
+    }
+  };
+
+  const onSubmit = async (data) => {
+    console.log('📝 Form submitted with data:', data);
+    
+    // Merge current form data with previous steps
     const newFormData = { ...formData, ...data };
     setFormData(newFormData);
+    console.log('📋 Complete form data:', newFormData);
 
     if (currentStep < 5) {
+      console.log(`➡️ Moving to step ${currentStep + 1}`);
       nextStep();
     } else {
-      // Calculate BMR and TDEE
-      const bmr = calculateBMR(newFormData);
-      const tdee = calculateTDEE(bmr, newFormData.activityLevel);
+      console.log('🚀 Final step - saving profile...');
+      setIsSubmitting(true);
       
-      const userData = {
-        ...newFormData,
-        bmr,
-        tdee,
-        createdAt: new Date().toISOString(),
-      };
+      try {
+        // Validate required fields
+        const requiredFields = ['name', 'age', 'gender', 'height', 'weight', 'activityLevel', 'goal', 'preferences'];
+        const missingFields = requiredFields.filter(field => !newFormData[field]);
+        
+        if (missingFields.length > 0) {
+          console.error('❌ Missing required fields:', missingFields);
+          toast.error(`Missing required fields: ${missingFields.join(', ')}`);
+          return;
+        }
 
-      localStorage.setItem('nutritionUser', JSON.stringify(userData));
-      toast.success('Profile created successfully!');
-      onComplete();
+        // Calculate BMR and TDEE
+        const bmr = calculateBMR(newFormData);
+        const tdee = calculateTDEE(bmr, newFormData.activityLevel);
+        
+        console.log('🧮 Calculated BMR:', bmr, 'TDEE:', tdee);
+        
+        // Prepare profile data for database with proper field mapping
+        const profileData = {
+          // Basic info
+          name: newFormData.name,
+          age: parseInt(newFormData.age),
+          gender: newFormData.gender,
+          heightCm: parseFloat(newFormData.height),
+          weightKg: parseFloat(newFormData.weight),
+          
+          // Activity and goals
+          activityLevel: newFormData.activityLevel,
+          goal: newFormData.goal,
+          preferences: newFormData.preferences,
+          
+          // Calculated values
+          bmr: Math.round(bmr),
+          tdee: Math.round(tdee),
+          
+          // Onboarding completion
+          onboardingCompleted: true,
+          onboardingCompletedAt: new Date().toISOString()
+        };
+
+        console.log('💾 Profile data to save:', profileData);
+
+        // Save to database
+        const savedProfile = await saveProfileToDatabase(profileData);
+        
+        // Create user data object for localStorage and callback
+        const userData = {
+          ...newFormData,
+          ...savedProfile, // Include any additional data from backend
+          bmr,
+          tdee,
+          createdAt: new Date().toISOString(),
+        };
+        
+        // Update localStorage
+        localStorage.setItem('nutritionUser', JSON.stringify(userData));
+        
+        console.log('✅ Profile creation completed successfully');
+        toast.success('Profile created successfully!');
+        onComplete(userData);
+        
+        // Generate default meal plans after onboarding
+        try {
+          console.log('🚀 Generating default meal plans...');
+          const mealPlanResponse = await mealPlanService.generateDefaultMealPlans();
+          console.log('✅ Default meal plans generated:', mealPlanResponse);
+          toast.success('Personalized meal plans generated!');
+        } catch (error) {
+          console.error('❌ Error generating default meal plans:', error);
+          // Don't fail onboarding if meal plan generation fails
+          toast.error('Profile created successfully! Meal plans will be generated when you visit the meal plans page.');
+        }
+        
+      } catch (error) {
+        console.error('❌ Profile save failed:', error);
+        
+        // Show specific error message
+        toast.error(`Failed to save profile: ${error.message}`);
+        
+        // Don't complete onboarding if save fails - let user retry
+        // Instead, show them what went wrong
+        console.log('🔧 Allowing user to retry...');
+        
+      } finally {
+        setIsSubmitting(false);
+      }
     }
+  };
+
+  // Get current form data for step 5 preview
+  const getCurrentFormData = () => {
+    return { ...formData, ...watchedData };
   };
 
   return (
@@ -102,6 +236,7 @@ export default function Onboarding({ onComplete }) {
                       <label className="block text-sm font-semibold text-text-base mb-2">Name</label>
                       <input
                         {...register('name', { required: 'Name is required' })}
+                        defaultValue={formData.name || ''}
                         className="w-full px-4 py-3 rounded-xl border border-dark-300 bg-dark-100 text-text-base placeholder-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                         placeholder="Your name"
                       />
@@ -113,6 +248,7 @@ export default function Onboarding({ onComplete }) {
                       <input
                         type="number"
                         {...register('age', { required: 'Age is required', min: 16, max: 100 })}
+                        defaultValue={formData.age || ''}
                         className="w-full px-4 py-3 rounded-xl border border-dark-300 bg-dark-100 text-text-base placeholder-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                         placeholder="25"
                       />
@@ -123,6 +259,7 @@ export default function Onboarding({ onComplete }) {
                       <label className="block text-sm font-semibold text-text-base mb-2">Gender</label>
                       <select
                         {...register('gender', { required: 'Gender is required' })}
+                        defaultValue={formData.gender || ''}
                         className="w-full px-4 py-3 rounded-xl border-2 border-dark-300 bg-dark-100 text-text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                       >
                         <option value="">Select gender</option>
@@ -138,6 +275,7 @@ export default function Onboarding({ onComplete }) {
                       <input
                         type="number"
                         {...register('height', { required: 'Height is required', min: 120, max: 250 })}
+                        defaultValue={formData.height || ''}
                         className="w-full px-4 py-3 rounded-xl border border-dark-300 bg-dark-100 text-text-base placeholder-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                         placeholder="175"
                       />
@@ -150,6 +288,7 @@ export default function Onboarding({ onComplete }) {
                         type="number"
                         step="0.1"
                         {...register('weight', { required: 'Weight is required', min: 30, max: 300 })}
+                        defaultValue={formData.weight || ''}
                         className="w-full px-4 py-3 rounded-xl border border-dark-300 bg-dark-100 text-text-base placeholder-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                         placeholder="70.5"
                       />
@@ -184,6 +323,7 @@ export default function Onboarding({ onComplete }) {
                           type="radio"
                           {...register('activityLevel', { required: 'Activity level is required' })}
                           value={level.value}
+                          defaultChecked={formData.activityLevel === level.value}
                           className="mt-1 w-5 h-5 text-primary focus:ring-primary"
                         />
                         <div>
@@ -220,6 +360,7 @@ export default function Onboarding({ onComplete }) {
                           type="radio"
                           {...register('goal', { required: 'Goal is required' })}
                           value={goal.value}
+                          defaultChecked={formData.goal === goal.value}
                           className="mt-1 w-5 h-5 text-primary focus:ring-primary"
                         />
                         <div>
@@ -259,8 +400,9 @@ export default function Onboarding({ onComplete }) {
                       <label key={pref.value} className="flex items-start gap-4 p-4 rounded-xl border border-dark-300 bg-dark-100 hover:border-primary hover:bg-dark-200 has-checked:border-primary has-checked:bg-dark-200 cursor-pointer transition-all duration-200">
                         <input
                           type="radio"
-                          {...register('preferences', { required: "No preference is required" })}
+                          {...register('preferences', { required: "Food preference is required" })}
                           value={pref.value}
+                          defaultChecked={formData.preferences === pref.value}
                           className="mt-1 w-5 h-5 text-primary focus:ring-primary"
                         />
                         <div>
@@ -281,25 +423,58 @@ export default function Onboarding({ onComplete }) {
                   exit={{ x: -300, opacity: 0 }}
                   className="space-y-6"
                 >
-                  <div className="bg-dark-100 rounded-lg p-6 mt-6">
-                    <h3 className="font-semibold text-text-base mb-4">Your Personalized Plan</h3>
-                    <p className="text-text-muted mb-4">We've calculated your nutrition needs based on your information.</p>
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-text-base mb-2">Your Personalized Plan</h2>
+                    <p className="text-text-muted">Review your information and complete setup</p>
+                  </div>
+
+                  <div className="bg-dark-100 rounded-lg p-6">
+                    <h3 className="font-semibold text-text-base mb-4">Profile Summary</h3>
                     
+                    {/* Profile Summary */}
+                    <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+                      <div><span className="text-text-muted">Name:</span> <span className="text-text-base">{getCurrentFormData().name || 'Not set'}</span></div>
+                      <div><span className="text-text-muted">Age:</span> <span className="text-text-base">{getCurrentFormData().age || 'Not set'}</span></div>
+                      <div><span className="text-text-muted">Gender:</span> <span className="text-text-base">{getCurrentFormData().gender || 'Not set'}</span></div>
+                      <div><span className="text-text-muted">Height:</span> <span className="text-text-base">{getCurrentFormData().height ? `${getCurrentFormData().height} cm` : 'Not set'}</span></div>
+                      <div><span className="text-text-muted">Weight:</span> <span className="text-text-base">{getCurrentFormData().weight ? `${getCurrentFormData().weight} kg` : 'Not set'}</span></div>
+                      <div><span className="text-text-muted">Activity:</span> <span className="text-text-base">{getCurrentFormData().activityLevel || 'Not set'}</span></div>
+                      <div><span className="text-text-muted">Goal:</span> <span className="text-text-base">{getCurrentFormData().goal || 'Not set'}</span></div>
+                      <div><span className="text-text-muted">Diet:</span> <span className="text-text-base">{getCurrentFormData().preferences || 'Not set'}</span></div>
+                    </div>
+                    
+                    {/* Calculated Values */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-dark-200 p-4 rounded-lg">
                         <div className="text-text-base">Daily Calories</div>
                         <div className="font-bold text-primary-DEFAULT text-2xl">
-                          {formData ? 
-                            calculateMacroTargets(calculateTDEE(calculateBMR(formData), formData.activityLevel), formData.goal).calories : 0} kcal
+                          {getCurrentFormData().weight && getCurrentFormData().height && getCurrentFormData().age ? 
+                            calculateMacroTargets(
+                              calculateTDEE(
+                                calculateBMR(getCurrentFormData()), 
+                                getCurrentFormData().activityLevel || 'sedentary'
+                              ), 
+                              getCurrentFormData().goal || 'maintain'
+                            ).calories : 0} kcal
                         </div>
                       </div>
                       <div className="bg-dark-200 p-4 rounded-lg">
                         <div className="text-text-base">BMR</div>
                         <div className="font-bold text-primary-DEFAULT text-2xl">
-                          {formData ? Math.round(calculateBMR(formData)) : 0} kcal
+                          {getCurrentFormData().weight && getCurrentFormData().height && getCurrentFormData().age ? 
+                            Math.round(calculateBMR(getCurrentFormData())) : 0} kcal
                         </div>
                       </div>
                     </div>
+
+                    {isSubmitting && (
+                      <div className="text-center py-4">
+                        <div className="inline-flex items-center gap-2 text-primary-DEFAULT">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-DEFAULT"></div>
+                          Saving your profile...
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -310,7 +485,7 @@ export default function Onboarding({ onComplete }) {
               <button
                 type="button"
                 onClick={prevStep}
-                disabled={currentStep === 1}
+                disabled={currentStep === 1 || isSubmitting}
                 className="flex items-center gap-2 px-6 py-3 bg-dark-300 rounded-xl text-text-base border border-dark-300 hover:bg-dark-200 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -319,10 +494,20 @@ export default function Onboarding({ onComplete }) {
 
               <button
                 type="submit"
-                className="flex items-center gap-2 px-8 py-3 bg-primary-DEFAULT text-white rounded-xl hover:bg-primary-600 hover:shadow-lg hover:shadow-primary/25 transition-all duration-200 cursor-pointer"
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-8 py-3 bg-primary-DEFAULT text-white rounded-xl hover:bg-primary-600 hover:shadow-lg hover:shadow-primary/25 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {currentStep === 5 ? 'Complete Setup' : 'Next'}
-                {<ChevronRight className="w-4 h-4" />}
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    {currentStep === 5 ? 'Complete Setup' : 'Next'}
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           </form>

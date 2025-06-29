@@ -1,148 +1,266 @@
-
 import React, { useState } from 'react';
 import { auth, googleProvider } from '../firebase';
-import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import {
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from 'firebase/auth';
+import authService from '../services/authService';
 
 const AuthModal = ({ onClose }) => {
-  const [isLogin, setIsLogin] = useState(true); // true for login, false for signup
+  const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleGoogleSignIn = async () => {
+  // Helper function to safely save to localStorage
+  const safeSetLocalStorage = (key, value) => {
     try {
-      await signInWithPopup(auth, googleProvider);
-      onClose(); // Close modal on successful sign-in
+      if (value && typeof value === 'object') {
+        localStorage.setItem(key, JSON.stringify(value));
+      } else if (typeof value === 'string' && value.trim() !== '') {
+        localStorage.setItem(key, value);
+      }
+      // Don't save undefined, null, or empty values
     } catch (error) {
-      console.error("Error signing in with Google:", error.message);
-      setError("Failed to sign in with Google. Please try again.");
+      console.warn(`Failed to save ${key} to localStorage:`, error);
     }
   };
 
-  const handleSubmit = async (e) => {
+  // Helper function to sync with backend
+  const syncWithBackend = async (idToken, isNewUser = false, userName = null) => {
+    try {
+      const payload = { idToken };
+      if (isNewUser && userName) {
+        payload.name = userName;
+        payload.isNewUser = true;
+      }
+      
+      const { data } = await api.post('/auth/firebase', payload);
+      
+      // Safely save data
+      safeSetLocalStorage('token', data.token);
+      safeSetLocalStorage('user', data.user);
+      
+      return data;
+    } catch (backendError) {
+      console.error('Backend sync error:', backendError);
+      throw new Error(backendError.response?.data?.msg || 'Failed to sync with backend');
+    }
+  };
+
+  // Email/Password submit - Now uses Firebase Auth
+  const handleSubmit = async e => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
+    
     try {
+      let userCredential;
+      
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        // Firebase login
+        userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        // Firebase signup
+        userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       }
-      onClose();
-    } catch (error) {
-      console.error("Authentication error:", error.message);
-      if (error.code === 'auth/email-already-in-use') {
-        setError("Email already in use. Please log in or use a different email.");
-      } else if (error.code === 'auth/invalid-credential') {
-          setError("Invalid credentials. Please check your email and password.");
-      } else if (error.code === 'auth/weak-password') {
-          setError("Password should be at least 6 characters.");
+      
+      // Sync with backend for both login and signup
+      const idToken = await userCredential.user.getIdToken();
+      await authService.syncWithBackend(idToken, !isLogin, name.trim());
+      
+      // Don't call onClose() here - let the App.jsx useEffect handle the state change
+      // The onAuthStateChanged listener will detect the Firebase auth change
+      
+    } catch (err) {
+      console.error('Auth error:', err);
+      let errorMessage = 'Authentication failed';
+      
+      // Handle Firebase-specific errors
+      if (err.code) {
+        switch (err.code) {
+          case 'auth/user-not-found':
+            errorMessage = 'No account found with this email';
+            break;
+          case 'auth/wrong-password':
+            errorMessage = 'Incorrect password';
+            break;
+          case 'auth/email-already-in-use':
+            errorMessage = 'An account with this email already exists';
+            break;
+          case 'auth/weak-password':
+            errorMessage = 'Password should be at least 6 characters';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Invalid email address';
+            break;
+          default:
+            errorMessage = err.message;
+        }
       }
-      else {
-        setError("Authentication failed. Please check your credentials.");
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Google Sign-In via Firebase + backend
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    
+    try {
+      // 1) Trigger Firebase popup
+      const result = await signInWithPopup(auth, googleProvider);
+      
+      // 2) Get Firebase ID token and send to backend
+      const idToken = await result.user.getIdToken();
+      await authService.syncWithBackend(idToken, result._tokenResponse?.isNewUser || false);
+      
+      // Don't call onClose() here - let the App.jsx useEffect handle the state change
+      // The onAuthStateChanged listener will detect the Firebase auth change
+      
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+      let errorMessage = 'Google sign-in failed';
+      
+      if (err.code) {
+        switch (err.code) {
+          case 'auth/popup-closed-by-user':
+            errorMessage = 'Sign-in was cancelled';
+            break;
+          case 'auth/popup-blocked':
+            errorMessage = 'Pop-up was blocked by your browser';
+            break;
+          default:
+            errorMessage = err.message;
+        }
       }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-96">
+      <div className="bg-white p-8 rounded-lg shadow-xl w-96 relative">
+        <button 
+          onClick={onClose} 
+          className="absolute top-2 right-2 text-xl hover:text-gray-700"
+          disabled={loading}
+        >
+          ×
+        </button>
+        
         <h2 className="text-2xl font-bold mb-6 text-center">
           {isLogin ? 'Login' : 'Sign Up'}
         </h2>
-
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="email@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
           </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="********"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex items-center justify-between mb-4">
-            <button
-              type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
-            >
-              {isLogin ? 'Login' : 'Sign Up'}
-            </button>
-          </div>
-        </form>
+        )}
 
-        <div className="relative flex py-5 items-center">
-          <div className="flex-grow border-t border-gray-300"></div>
-          <span className="flex-shrink mx-4 text-gray-400 text-sm">OR</span>
-          <div className="flex-grow border-t border-gray-300"></div>
-        </div>
-
+        {/* Google Button */}
         <button
           onClick={handleGoogleSignIn}
-          className="w-full bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center justify-center"
+          disabled={loading}
+          className="w-full mb-4 flex items-center justify-center border rounded py-2 hover:bg-gray-100 disabled:bg-gray-200 disabled:cursor-not-allowed transition-colors"
         >
-          <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M43.611 20.083H42V20H24v8h11.341c-1.684 2.924-4.505 5.34-7.859 6.879l.666 1.343a22.956 22.956 0 007.135 2.146l.659 1.35C35.08 38.65 39.563 36 42 32.228V20.083z" fill="#FFC107"/>
-            <path d="M6.39 14.593l-.689-1.349C3.765 15.65 2 18.571 2 22.001c0 3.197.94 6.136 2.531 8.608l1.326-1.312C4.195 27.534 3.25 24.898 3.25 22.001c0-2.395.748-4.636 2.062-6.408z" fill="#4CAF50"/>
-            <path d="M24 6c3.218 0 6.276 1.258 8.531 3.322l5.067-4.996C34.254 2.188 29.387 0 24 0 14.153 0 5.253 5.483 1.096 13.064l1.358.682C5.006 7.625 13.785 2.5 24 2.5V6z" fill="#E53935"/>
-            <path d="M42 20.083V20H24v8h11.341c-1.684 2.924-4.505 5.34-7.859 6.879l.666 1.343a22.956 22.956 0 007.135 2.146l.659 1.35C35.08 38.65 39.563 36 42 32.228V20.083z" fill="#4285F4"/>
-            <path d="M24 25.5c-3.13 0-5.875-1.57-7.531-3.953l-1.326 1.312C16.14 24.966 19.86 27.5 24 27.5c4.14 0 7.86-2.534 9.857-6.074L32.53 20.7c-1.656 2.383-4.39 3.93-7.53 3.93z" fill="#FBBC04"/>
-          </svg>
-          Sign {isLogin ? 'In' : 'Up'} with Google
+          <img src="/google-logo.svg" alt="Google" className="h-5 w-5 mr-2" />
+          {loading ? 'Processing...' : 'Continue with Google'}
         </button>
 
-        <p className="text-center text-sm mt-6">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
+        <div className="text-center text-gray-500 mb-4">or</div>
+
+        <form onSubmit={handleSubmit}>
+          {!isLogin && (
+            <div className="mb-4">
+              <label htmlFor="name" className="block mb-1 font-medium">Name</label>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required={!isLogin}
+                disabled={loading}
+                className="w-full border rounded px-3 py-2 focus:outline-none focus:border-blue-500 disabled:bg-gray-100"
+                placeholder="Enter your full name"
+              />
+            </div>
+          )}
+          
+          <div className="mb-4">
+            <label htmlFor="email" className="block mb-1 font-medium">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              disabled={loading}
+              className="w-full border rounded px-3 py-2 focus:outline-none focus:border-blue-500 disabled:bg-gray-100"
+              placeholder="Enter your email"
+            />
+          </div>
+          
+          <div className="mb-6">
+            <label htmlFor="password" className="block mb-1 font-medium">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              disabled={loading}
+              className="w-full border rounded px-3 py-2 focus:outline-none focus:border-blue-500 disabled:bg-gray-100"
+              placeholder="Enter your password"
+              minLength="6"
+            />
+          </div>
+          
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-500 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white py-2 rounded transition-colors flex items-center justify-center"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {isLogin ? 'Logging in...' : 'Creating account...'}
+              </>
+            ) : (
+              isLogin ? 'Login' : 'Sign Up'
+            )}
+          </button>
+        </form>
+        
+        <p className="text-center text-sm mt-4">
+          {isLogin ? "Don't have an account?" : 'Already have one?'}{' '}
           <button
             onClick={() => {
               setIsLogin(!isLogin);
-              setError(null); // Clear error when switching
+              setError(null);
+              setName('');
+              setEmail('');
+              setPassword('');
             }}
-            className="text-blue-500 hover:text-blue-800 font-bold focus:outline-none"
+            disabled={loading}
+            className="text-blue-500 hover:underline disabled:text-blue-300"
           >
             {isLogin ? 'Sign Up' : 'Login'}
           </button>
         </p>
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-        >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
       </div>
     </div>
   );

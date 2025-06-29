@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import CreatePlanModal from "../components/mealplan_comp/CreatePlanModal";
 import MealRecipeModal from '../components/mealplan_comp/MealRecipeModal';
+import PersonalizedPlans from '../components/mealplan_comp/PersonalizedPlans';
 
 export default function MealPlans() {
   const [selectedMeal, setSelectedMeal] = useState(null);
@@ -21,36 +22,6 @@ export default function MealPlans() {
   const [selectedMealPlan, setSelectedMealPlan] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const defaultPlans = [
-    {
-      id: 1,
-      name: "Indian Vegetarian Thali",
-      description: "Traditional Indian vegetarian meals with balanced nutrition",
-      duration: "7 days",
-      calories: "1,800-2,000",
-      difficulty: "Moderate",
-      cuisine: "Indian",
-      rating: 4.8,
-      image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg",
-      tags: ["Vegetarian", "Traditional", "Balanced"],
-      meals: 21,
-      generated: false
-    },
-    {
-      id: 2,
-      name: "South Indian Special",
-      description: "Authentic South Indian dishes with rich flavors",
-      duration: "5 days",
-      calories: "2,000-2,200",
-      difficulty: "Easy",
-      cuisine: "South Indian",
-      rating: 4.9,
-      image: "https://images.pexels.com/photos/4331489/pexels-photo-4331489.jpeg",
-      tags: ["South Indian", "Authentic", "Spicy"],
-      meals: 15,
-      generated: false
-    }
-  ];
 
   const handleGeneratePlan = async (formData) => {
     setIsGenerating(true);
@@ -144,96 +115,8 @@ export default function MealPlans() {
         </div>
       )}
 
-      {/* Meal Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {[...defaultPlans, ...mealPlans].map((plan, index) => (
-          <motion.div
-            key={plan.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 * index }}
-            onClick={() => {
-              if (plan.generated) {
-                setSelectedMealPlan(plan);
-              } else {
-                setSelectedMeal(plan);
-              }
-            }}
-            className="group cursor-pointer"
-          >
-            <div className="bg-dark-200 rounded-2xl overflow-hidden border border-card-border hover:border-primary-DEFAULT transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-primary-DEFAULT/10">
-              {/* Image Container */}
-              <div className="relative h-48 overflow-hidden">
-                <img 
-                  src={plan.image} 
-                  alt={plan.name} 
-                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-dark-200 to-transparent opacity-60" />
-                <div className="absolute top-4 right-4 flex items-center gap-2 bg-dark-200/80 backdrop-blur-sm rounded-full px-3 py-1">
-                  <Heart className="w-4 h-4 text-primary-DEFAULT" />
-                  <span className="text-sm font-medium">{plan.rating}</span>
-                </div>
-                {plan.generated && (
-                  <div className="absolute top-4 left-4 bg-primary-DEFAULT/90 backdrop-blur-sm rounded-full px-3 py-1">
-                    <span className="text-xs font-medium text-white">AI Generated</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Content */}
-              <div className="p-6 space-y-4">
-                <div>
-                  <h3 className="text-xl font-bold text-white group-hover:text-primary-DEFAULT transition-colors">
-                    {plan.name}
-                  </h3>
-                  <p className="text-text-muted mt-2 text-sm line-clamp-2">
-                    {plan.description}
-                  </p>
-                </div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2 text-text-muted">
-                    <Calendar className="w-4 h-4" />
-                    <span className="text-sm">{plan.duration}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-text-muted">
-                    <Flame className="w-4 h-4" />
-                    <span className="text-sm">{plan.calories} cal</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-text-muted">
-                    <ChefHat className="w-4 h-4" />
-                    <span className="text-sm">{plan.difficulty}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-text-muted">
-                    <Utensils className="w-4 h-4" />
-                    <span className="text-sm">{plan.meals} meals</span>
-                  </div>
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2">
-                  {plan.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1 bg-primary-DEFAULT/10 text-primary-DEFAULT text-xs rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Action Button */}
-                <button className="w-full flex items-center justify-center gap-2 py-3 bg-primary-DEFAULT/10 text-primary-DEFAULT rounded-xl group-hover:bg-primary-DEFAULT group-hover:text-white transition-all duration-300">
-                  <BookOpen className="w-4 h-4" />
-                  View Plan
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      {/* Personalized Plans Section */}
+      <PersonalizedPlans onCustomPlanCreate={handleGeneratePlan} />
 
       {/* Modals */}
       <CreatePlanModal
