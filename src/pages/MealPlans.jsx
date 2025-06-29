@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import axios from 'axios';
-import { motion } from "framer-motion";
+import api from '../api';
 import {
   Calendar,
   Clock,
@@ -18,18 +17,16 @@ import PersonalizedPlans from '../components/mealplan_comp/PersonalizedPlans';
 export default function MealPlans() {
   const [selectedMeal, setSelectedMeal] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [mealPlans, setMealPlans] = useState([]);
   const [selectedMealPlan, setSelectedMealPlan] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
-
 
   const handleGeneratePlan = async (formData) => {
     setIsGenerating(true);
     
     try {
-      console.log('Generating meal plan with data:', formData);
+      console.log('Generating custom meal plan with data:', formData);
 
-      const response = await axios.post('/api/mealplans/generate', formData, {
+      const response = await api.post('/mealplans/generate-custom', formData, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -37,36 +34,40 @@ export default function MealPlans() {
 
       console.log('API Response:', response.data);
 
-      const planData = response.data.data;
+      if (response.data.success) {
+        const planData = response.data.data;
 
-      const newPlan = {
-        id: Date.now(),
-        name: formData.name || 'Custom Indian Meal Plan',
-        description: 'AI generated personalized Indian meal plan',
-        duration: `${formData.duration} days`,
-        calories: `${formData.calories}`,
-        difficulty: formData.difficulty.charAt(0).toUpperCase() + formData.difficulty.slice(1),
-        prepTime: `${formData.prepTime} mins`,
-        image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg",
-        tags: formData.mealTypes.map(meal => 
-          meal.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-        ),
-        meals: formData.duration * formData.mealTypes.length,
-        data: planData,
-        rating: 5.0,
-        generated: true
-      };
+        const newPlan = {
+          id: planData._id,
+          name: planData.name,
+          description: planData.description || 'AI generated personalized meal plan',
+          duration: `${planData.duration} days`,
+          calories: `${planData.targetCalories}`,
+          difficulty: planData.difficulty.charAt(0).toUpperCase() + planData.difficulty.slice(1),
+          prepTime: `${planData.prepTime} mins`,
+          image: planData.image || "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg",
+          tags: planData.tags || formData.mealTypes.map(meal => 
+            meal.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+          ),
+          meals: planData.duration * (planData.mealTypes?.length || formData.mealTypes.length),
+          data: planData.days,
+          rating: planData.rating || 5.0,
+          generated: true,
+          custom: true
+        };
 
-      setMealPlans(prevPlans => [newPlan, ...prevPlans]);
-      console.log('Meal plan generated successfully:', newPlan);
-      
-      // Show success message
-      alert('Meal plan generated successfully!');
+        console.log('Custom meal plan generated and saved successfully:', newPlan);
+        
+        // Show success message
+        alert('Custom meal plan generated and saved successfully!');
+      } else {
+        throw new Error(response.data.message || 'Failed to generate meal plan');
+      }
 
     } catch (error) {
-      console.error("Error generating meal plan:", error);
+      console.error("Error generating custom meal plan:", error);
       
-      let errorMessage = 'Failed to generate meal plan. ';
+      let errorMessage = 'Failed to generate custom meal plan. ';
       if (error.response?.data?.message) {
         errorMessage += error.response.data.message;
       } else if (error.message) {
@@ -82,11 +83,7 @@ export default function MealPlans() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="p-6 space-y-8"
-    >
+    <div className="p-6 space-y-8">
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
         <div className="space-y-2">
@@ -138,6 +135,6 @@ export default function MealPlans() {
           onClose={() => setSelectedMealPlan(null)}
         />
       )}
-    </motion.div>
+    </div>
   );
 }

@@ -6,7 +6,7 @@ class AuthService {
   // Get current user from localStorage
   getCurrentUser() {
     try {
-      const userStr = localStorage.getItem('user');
+      const userStr = localStorage.getItem('nutritionUser');
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
       console.error('Error parsing user from localStorage:', error);
@@ -43,7 +43,7 @@ class AuthService {
       
       // Save to localStorage
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('nutritionUser', JSON.stringify(data.user));
       
       return data;
     } catch (error) {
@@ -72,7 +72,7 @@ class AuthService {
       const currentUser = this.getCurrentUser();
       if (currentUser) {
         const updatedUser = { ...currentUser, ...data };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        localStorage.setItem('nutritionUser', JSON.stringify(updatedUser));
       }
       
       return data;
@@ -85,7 +85,6 @@ class AuthService {
   // Logout user
   logout() {
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
     localStorage.removeItem('nutritionUser');
     
     // Sign out from Firebase

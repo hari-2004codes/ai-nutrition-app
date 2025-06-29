@@ -1,6 +1,7 @@
     // server/test-endpoints.js
     import express from 'express';
     import listEndpoints from 'express-list-endpoints';
+    import axios from 'axios';
 
     const app = express();
 
@@ -28,4 +29,32 @@
     app.listen(PORT, () => {
       console.log(`Test server listening on http://localhost:${PORT}`);
     });
+
+    const API_BASE = 'http://localhost:4000/api';
+
+    // Test meal plan generation
+    const testMealPlanGeneration = async () => {
+      try {
+        console.log('Testing meal plan generation...');
+        
+        // First, test if the server is running
+        const healthCheck = await axios.get('http://localhost:4000/');
+        console.log('✅ Server is running:', healthCheck.data);
+        
+        // Test the mealplans endpoint
+        const mealPlansResponse = await axios.get(`${API_BASE}/mealplans`);
+        console.log('✅ Meal plans endpoint accessible:', mealPlansResponse.status);
+        
+        console.log('✅ All tests passed!');
+      } catch (error) {
+        console.error('❌ Test failed:', error.message);
+        if (error.response) {
+          console.error('Response status:', error.response.status);
+          console.error('Response data:', error.response.data);
+        }
+      }
+    };
+
+    // Run the test
+    testMealPlanGeneration();
     
