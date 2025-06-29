@@ -49,16 +49,6 @@ export default function Header({ onMenuClick, onSidebarToggle, sidebarCollapsed 
 
         
         <div className="flex items-center gap-4">
-          
-          <button 
-            className="p-2 rounded-xl hover:bg-dark-200 transition-colors relative"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5 text-text-muted" />
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
-          </button>
-          
-          
           <button onClick={() => navigate('/profile')} className="flex items-center gap-2 bg-dark-200 rounded-xl px-3 py-2 cursor-pointer">
             <div className="w-8 h-8 bg-primary-DEFAULT rounded-lg flex items-center justify-center">
               <User className="w-4 h-4 text-white" />
