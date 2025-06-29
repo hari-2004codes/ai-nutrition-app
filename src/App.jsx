@@ -7,7 +7,6 @@ import Dashboard from './pages/DashBoard';
 import Profile from './pages/Profile';
 import MealLog from './pages/MealLogging';
 import MealPlans from './pages/MealPlans';
-import Settings from './pages/Settings';
 import Onboarding from './pages/Onboarding';
 import LoadingSpinner from './components/general_comp/LoadingSpinner';
 import ErrorBoundary from './components/general_comp/ErrorBoundary';
@@ -213,14 +212,6 @@ function App() {
                       element={
                         <ErrorBoundary onGoHome={handleRouteError}>
                           <Profile />
-                        </ErrorBoundary>
-                      } 
-                    />
-                    <Route 
-                      path="/settings" 
-                      element={
-                        <ErrorBoundary onGoHome={handleRouteError}>
-                          <Settings />
                         </ErrorBoundary>
                       } 
                     />

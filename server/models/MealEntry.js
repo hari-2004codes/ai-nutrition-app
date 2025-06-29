@@ -8,7 +8,6 @@ const mealEntrySchema = new mongoose.Schema({
   
   // array of foods and their details
   items: [{
-    food: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodItem' },
     name: { type: String, required: true },
     quantity: { type: Number, required: true },
     unit: { type: String, default: 'g' },
