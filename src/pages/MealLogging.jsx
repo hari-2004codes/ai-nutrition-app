@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { Plus, Search, Clock, Utensils, Camera, Trash2 } from "lucide-react";
 import FoodSearch from "../components/mealLog_comp/FoodSearch";
 import ImageUploadModal from "../components/mealLog_comp/ImageUploadModal";
-import { addMealEntry, getMealEntries, deleteFoodItem } from "../services/mealApi";
+import { addMealEntry, getMealEntries, deleteFoodItem, updateMealEntry } from "../services/mealApi";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import QuantityInputModal from "../components/mealLog_comp/QuantityInputModal";
+import toast from "react-hot-toast";
 
 export default function MealLog() {
   const [selectedMeal, setSelectedMeal] = useState("breakfast");
@@ -23,15 +26,17 @@ export default function MealLog() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [editingFood, setEditingFood] = useState(null);
 
-  // Fetch meals for today when component mounts
+  // Fetch meals for selected date
   useEffect(() => {
-    const fetchTodaysMeals = async () => {
+    const fetchMeals = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const today = new Date().toISOString().split('T')[0];
-        const mealEntries = await getMealEntries(today);
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        const mealEntries = await getMealEntries(dateStr);
         
         // Organize meals by type
         const organizedMeals = {
@@ -67,8 +72,8 @@ export default function MealLog() {
       }
     };
 
-    fetchTodaysMeals();
-  }, []);
+    fetchMeals();
+  }, [selectedDate]);
 
   const deleteFoodFromMeal = async (mealType, itemIndex) => {
     try {
@@ -111,7 +116,7 @@ export default function MealLog() {
 
   const addFoodToMeal = async (food) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const dateStr = selectedDate.toISOString().split('T')[0];
       
       console.log('Food object received:', food);
       
@@ -153,27 +158,7 @@ export default function MealLog() {
         console.log('Using direct food data:', { quantity, calories, protein, carbs, fat });
       }
 
-      const mealData = {
-        date: today,
-        mealType: selectedMeal,
-        items: [{
-          name: food.food?.food_name || food.name,
-          quantity: quantity,
-          unit: 'g',
-          calories: calories,
-          protein: protein,
-          carbs: carbs,
-          fat: fat,
-        }]
-      };
-
-      console.log('Meal data being sent:', mealData);
-
-      const newMealEntry = await addMealEntry(mealData);
-      
-      // Update local state with the processed food data
-      const processedFood = {
-        id: Date.now(),
+      const newFoodItem = {
         name: food.food?.food_name || food.name,
         quantity: quantity,
         unit: 'g',
@@ -182,17 +167,52 @@ export default function MealLog() {
         carbs: carbs,
         fat: fat,
       };
+
+      // Check if meal entry already exists for this meal type and date
+      const existingMealEntry = mealEntries[selectedMeal];
       
-      setMeals(prev => ({
-        ...prev,
-        [selectedMeal]: [...prev[selectedMeal], processedFood],
-      }));
-      
-      // Update meal entries
-      setMealEntries(prev => ({
-        ...prev,
-        [selectedMeal]: newMealEntry
-      }));
+      if (existingMealEntry) {
+        // Update existing meal entry by adding the new food item
+        const updatedItems = [...existingMealEntry.items, newFoodItem];
+        const updatedMealEntry = await updateMealEntry(existingMealEntry._id, { items: updatedItems });
+        
+        // Update local state
+        setMeals(prev => ({
+          ...prev,
+          [selectedMeal]: [...prev[selectedMeal], { ...newFoodItem, id: Date.now() }],
+        }));
+        
+        setMealEntries(prev => ({
+          ...prev,
+          [selectedMeal]: updatedMealEntry
+        }));
+        
+        console.log('Updated existing meal entry:', updatedMealEntry);
+      } else {
+        // Create new meal entry
+        const mealData = {
+          date: dateStr,
+          mealType: selectedMeal,
+          items: [newFoodItem]
+        };
+
+        console.log('Creating new meal entry:', mealData);
+
+        const newMealEntry = await addMealEntry(mealData);
+        
+        // Update local state
+        setMeals(prev => ({
+          ...prev,
+          [selectedMeal]: [{ ...newFoodItem, id: Date.now() }],
+        }));
+        
+        setMealEntries(prev => ({
+          ...prev,
+          [selectedMeal]: newMealEntry
+        }));
+        
+        console.log('Created new meal entry:', newMealEntry);
+      }
     } catch (error) {
       console.error('Failed to add food:', error);
       // You might want to show an error toast here
@@ -208,7 +228,7 @@ export default function MealLog() {
     }
     
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const dateStr = selectedDate.toISOString().split('T')[0];
       const items = nutritionData.nutritional_info_per_item.map((item, index) => {
         const info = item.nutritional_info || {};
         const nutrients = info.totalNutrients || {};
@@ -239,28 +259,59 @@ export default function MealLog() {
         };
       });
 
-      const mealData = {
-        date: today,
-        mealType: selectedMeal,
-        items
-      };
+      // Check if meal entry already exists for this meal type and date
+      const existingMealEntry = mealEntries[selectedMeal];
+      
+      if (existingMealEntry) {
+        // Update existing meal entry by adding the new food items
+        const updatedItems = [...existingMealEntry.items, ...items];
+        const updatedMealEntry = await updateMealEntry(existingMealEntry._id, { items: updatedItems });
+        
+        // Update local state
+        const newFoods = items.map((item, index) => ({
+          ...item,
+          id: `${Date.now()}-${index}`
+        }));
+        
+        setMeals(prev => ({
+          ...prev,
+          [selectedMeal]: [...prev[selectedMeal], ...newFoods],
+        }));
+        
+        setMealEntries(prev => ({
+          ...prev,
+          [selectedMeal]: updatedMealEntry
+        }));
+        
+        console.log('Updated existing meal entry with image foods:', updatedMealEntry);
+      } else {
+        // Create new meal entry
+        const mealData = {
+          date: dateStr,
+          mealType: selectedMeal,
+          items
+        };
 
-      const newMealEntry = await addMealEntry(mealData);
+        const newMealEntry = await addMealEntry(mealData);
 
-      // Update local state
-      const newFoods = items.map((item, index) => ({
-        ...item,
-        id: `${Date.now()}-${index}`
-      }));
+        // Update local state
+        const newFoods = items.map((item, index) => ({
+          ...item,
+          id: `${Date.now()}-${index}`
+        }));
 
-      setMeals(prev => ({
-        ...prev,
-        [selectedMeal]: [...prev[selectedMeal], ...newFoods],
-      }));
-      setMealEntries(prev => ({
-        ...prev,
-        [selectedMeal]: newMealEntry
-      }));
+        setMeals(prev => ({
+          ...prev,
+          [selectedMeal]: newFoods,
+        }));
+        
+        setMealEntries(prev => ({
+          ...prev,
+          [selectedMeal]: newMealEntry
+        }));
+        
+        console.log('Created new meal entry with image foods:', newMealEntry);
+      }
     } catch (error) {
       console.error('Failed to add foods from image:', error);
       // You might want to show an error toast here
@@ -297,11 +348,7 @@ export default function MealLog() {
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-6xl mx-auto space-y-8"
-    >
+    <div className="max-w-6xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center lg:text-left">
         <h1 className="text-4xl text-white font-bold text-shadow-text-base mb-2">
@@ -330,7 +377,13 @@ export default function MealLog() {
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-text-muted" />
                 <span className="font-semibold text-text-base">
-                  Today - {new Date().toLocaleDateString()}
+                  <DatePicker
+                    selected={selectedDate}
+                    onChange={date => setSelectedDate(date)}
+                    dateFormat="yyyy-MM-dd"
+                    className="bg-dark-100 text-white rounded-lg px-3 py-2 border border-card-border focus:outline-none focus:ring-2 focus:ring-primary-DEFAULT"
+                    maxDate={new Date()}
+                  />
                 </span>
               </div>
               <div className="bg-primary-DEFAULT/50 rounded-2xl px-4 py-2 border border-card-border shadow-xl shadow-card-border/20 text-lg font-semibold text-text-base">
@@ -425,11 +478,8 @@ export default function MealLog() {
             ) : (
               <div className="space-y-4">
                 {meals[selectedMeal].map((food, index) => (
-                  <motion.div
+                  <div
                     key={food.id || index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
                     className="bg-dark-300/50 rounded-xl p-4 border border-card-border relative group"
                   >
                     <div className="flex justify-between items-start mb-3">
@@ -439,6 +489,13 @@ export default function MealLog() {
                         </h3>
                         <p className="text-sm text-text-muted">
                           {Number(food.quantity).toFixed(1)} {food.unit}
+                          <button
+                            className="ml-2 px-2 py-1 text-xs bg-primary-DEFAULT/30 rounded hover:bg-primary-DEFAULT/60 transition"
+                            onClick={() => setEditingFood({ food, index })}
+                            title="Edit quantity"
+                          >
+                            Edit
+                          </button>
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -477,7 +534,7 @@ export default function MealLog() {
                         </div>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
 
                 {/* Meal Summary */}
@@ -562,10 +619,54 @@ export default function MealLog() {
               isOpen={showImageUpload}
               onClose={() => setShowImageUpload(false)}
               onDishesConfirmed={handleImageUploadComplete}
+              addFoodToMeal={addFoodToMeal}
+            />
+          )}
+
+          {editingFood && (
+            <QuantityInputModal
+              food={editingFood.food}
+              onClose={() => setEditingFood(null)}
+              onSave={async (newQuantity, servingLabel, servingGrams) => {
+                // Calculate per-gram nutrients
+                const perGram = {
+                  calories: editingFood.food.calories / editingFood.food.quantity,
+                  protein: editingFood.food.protein / editingFood.food.quantity,
+                  carbs: editingFood.food.carbs / editingFood.food.quantity,
+                  fat: editingFood.food.fat / editingFood.food.quantity,
+                };
+                const newFood = {
+                  ...editingFood.food,
+                  quantity: newQuantity,
+                  servingLabel,
+                  servingGrams,
+                  calories: +(perGram.calories * newQuantity).toFixed(1),
+                  protein: +(perGram.protein * newQuantity).toFixed(1),
+                  carbs: +(perGram.carbs * newQuantity).toFixed(1),
+                  fat: +(perGram.fat * newQuantity).toFixed(1),
+                };
+                // Update in meals state
+                setMeals(prev => ({
+                  ...prev,
+                  [selectedMeal]: prev[selectedMeal].map((f, i) => i === editingFood.index ? newFood : f)
+                }));
+                // Update in backend
+                const mealEntry = mealEntries[selectedMeal];
+                if (mealEntry) {
+                  const updatedItems = mealEntry.items.map((f, i) => i === editingFood.index ? newFood : f);
+                  await updateMealEntry(mealEntry._id, { items: updatedItems });
+                  setMealEntries(prev => ({
+                    ...prev,
+                    [selectedMeal]: { ...mealEntry, items: updatedItems }
+                  }));
+                  toast.success('Quantity updated!');
+                }
+                setEditingFood(null);
+              }}
             />
           )}
         </>
       )}
-    </motion.div>
+    </div>
   );
 }

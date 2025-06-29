@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, Camera, ChevronDown, ChevronUp, SquareChevronDown, Plus } from 'lucide-react';
+import { X, Camera, ChevronDown, ChevronUp, SquareChevronDown, Plus, CheckCircle2 } from 'lucide-react'; // Added CheckCircle2 for selection
 import LoadingSpinner from '../general_comp/LoadingSpinner';
 import FoodSearch from '../mealLog_comp/FoodSearch';
+import toast from 'react-hot-toast';
 
-export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed }) {
+export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed, addFoodToMeal }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -85,7 +86,7 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
   };
 
   const toggleSubclasses = (itemIndex, event) => {
-    event.stopPropagation(); // Prevent triggering the parent button's onClick
+    event.stopPropagation();
     setSubclassesExpanded(prev => ({
       ...prev,
       [itemIndex]: !prev[itemIndex]
@@ -100,22 +101,21 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
     let selectedName = prediction.name;
     let selectedId = prediction.id;
     
-    // If a subclass is selected, use its details
     if (subclassIndex !== null && prediction.subclasses && prediction.subclasses[subclassIndex]) {
       const subclass = prediction.subclasses[subclassIndex];
       selectedName = subclass.name;
-      selectedId = subclass.id || prediction.id; // fallback to parent id if subclass doesn't have one
+      selectedId = subclass.id || prediction.id;
     }
     
     setSelectedDishes(prev => ({
       ...prev,
       [position]: {
-        dishId: selectedId, // Always use the numeric ID
+        dishId: selectedId,
         name: selectedName,
         position: position,
         predIndex: predIndex,
         subclassIndex: subclassIndex,
-        source: "logmeal" // Always use logmeal since we're using IDs
+        source: "logmeal"
       }
     }));
   };
@@ -131,15 +131,9 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
   };
 
   const handleManualSelect = (food) => {
-    const position = Object.keys(selectedDishes).length + 1;
-    
-    setSelectedDishes(prev => ({
-      ...prev,
-      [position]: {
-        ...food,
-        position: position
-      },
-    }));
+    addFoodToMeal(food);
+    toast.success('Food item added successfully to your meal!');
+    setStep('select');
   };
 
   const handleConfirm = async () => {
@@ -148,7 +142,6 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
       return;
     }
 
-    // Remove validation that requires at least one dish
     setLoading(true);
     setError(null);
 
@@ -156,18 +149,16 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
       const dishesArray = Object.values(selectedDishes)
         .sort((a, b) => a.position - b.position);
 
-      // If no dishes selected, close the modal
       if (dishesArray.length === 0) {
         onClose();
         return;
       }
 
-      // Build arrays in parallel - each index corresponds to the same food item
       const payload = {
         imageId,
-        confirmedClass: dishesArray.map(d => d.dishId), // LogMeal IDs
-        source: dishesArray.map(() => "logmeal"), // All sources are logmeal
-        food_item_position: dishesArray.map(d => d.position) // 1-based positions
+        confirmedClass: dishesArray.map(d => d.dishId),
+        source: dishesArray.map(() => "logmeal"),
+        food_item_position: dishesArray.map(d => d.position)
       };
 
       console.log('Sending confirmation payload:', JSON.stringify(payload, null, 2));
@@ -188,25 +179,27 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
       console.error('Confirm error:', error.response?.data || error.message);
       setError(error.response?.data?.error || error.message || 'Failed to confirm dishes. Please try again.');
       setLoading(false);
-      return; // Don't close modal on error
+      return;
     }
     
     setLoading(false);
-    onClose(); // Only close after successful completion
+    onClose();
   };
 
   if (!isOpen) return null;
 
+  // New vertical layout implemented below
   return (
     <>
       <div className="fixed inset-0 z-50 overflow-hidden">
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <div className="bg-dark-200/90 backdrop-blur-md rounded-2xl p-6 w-[95%] max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl border border-card-border relative">
-            <div className="flex justify-between items-center mb-4">
+          {/* MODIFIED: Changed max-w for a better vertical layout and added custom-scrollbar class */}
+          <div className="bg-dark-200/90 backdrop-blur-md rounded-2xl p-6 w-[95%] max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl border border-card-border relative custom-scrollbar">
+            <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-text-base">
                 {step === 'upload' && 'Upload Meal Image'}
-                {step === 'select' && 'Confirm Food Items'}
+                {step === 'select' && 'Confirm Your Meal'}
                 {step === 'manual' && 'Add Food Manually'}
               </h2>
               <button 
@@ -237,14 +230,14 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
                         className="max-h-64 mx-auto rounded-lg object-contain"
                       />
                       <button
-                        className="absolute top-2 right-2 bg-dark-300/80 p-1 rounded-full"
+                        className="absolute top-2 right-2 bg-dark-300/80 p-1 rounded-full text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           setPreviewUrl(null);
                           setSelectedFile(null);
                         }}
                       >
-                        <X size={16} className="text-white" />
+                        <X size={16} />
                       </button>
                     </div>
                   ) : (
@@ -266,7 +259,7 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
                 <button
                   onClick={handleUpload}
                   disabled={loading || !selectedFile}
-                  className={`w-full py-3 px-4 rounded-xl text-white font-medium transition-colors ${
+                  className={`w-full py-3 px-4 rounded-xl text-white font-semibold transition-colors ${
                     loading || !selectedFile 
                       ? 'bg-dark-300/70 cursor-not-allowed' 
                       : 'bg-primary-DEFAULT hover:bg-primary-600'
@@ -281,111 +274,120 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
               </div>
             )}
 
+            {/* MODIFIED: This whole section is now a single vertical flex column */}
             {step === 'select' && predictions.length > 0 && (
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-text-base">Your Meal</h3>
-                  <div className="relative rounded-xl overflow-hidden border border-card-border">
-                    <img 
-                      src={previewUrl} 
-                      alt="Meal preview" 
-                      className="w-full object-contain"
-                    />
-                  </div>
-                   <p className="text-sm text-text-base font-semibold text-center">
-                    We detected {predictions.length} item(s). Select the correct dish.
+              <div className="flex flex-col gap-6">
+                {/* MODIFIED: Image is now a banner at the top */}
+                <div className="relative rounded-xl overflow-hidden border border-card-border">
+                  <img 
+                    src={previewUrl} 
+                    alt="Meal preview" 
+                    className="w-full h-auto max-h-72 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                  <p className="absolute bottom-0 left-0 right-0 p-4 text-sm text-white font-semibold text-center">
+                    We detected {predictions.length} item(s). Please confirm or correct the selections below.
                   </p>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-text-base">Confirm Items</h3>
-                  <div className="space-y-3 max-h-[60vh] md:max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
-                    {predictions.map((item, itemIndex) => {
-                      const position = itemIndex + 1;
-                      const selectedDish = selectedDishes[position];
+                {/* MODIFIED: Item list now flows vertically */}
+                <div className="space-y-3">
+                  {predictions.map((item, itemIndex) => {
+                    const position = itemIndex + 1;
+                    const selectedDish = selectedDishes[position];
 
-                      return (
-                        <div key={position} className="bg-dark-100/50 p-4 rounded-xl border border-card-border">
-                          <div className="flex items-center justify-between">
-                            <p className="font-semibold text-text-base">
-                              Item {itemIndex + 1}:{' '}
-                              <span className="font-normal text-primary-400">
-                                {selectedDish ? selectedDish.name : 'Not selected'}
-                              </span>
-                            </p>
-                            <button onClick={() => toggleDetails(itemIndex)} className="p-1 text-text-muted hover:text-text-base">
-                              {expandedItems[itemIndex] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                            </button>
-                          </div>
-                          
-                          {expandedItems[itemIndex] && (
-                            <div className="mt-3 space-y-2">
-                              {item.recognition_results.slice(0, 5).map((pred, predIndex) => (
-                                <div key={pred.id}>
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => handleDishSelect(itemIndex, predIndex)}
-                                      className={`flex-grow text-left p-3 rounded-lg transition-colors text-sm ${
-                                        selectedDish?.predIndex === predIndex && selectedDish?.subclassIndex === null
-                                          ? 'bg-primary-DEFAULT/50 text-white shadow-lg shadow-primary-DEFAULT/20'
-                                          : 'bg-dark-200 hover:bg-dark-100 text-text-base'
-                                      }`}
-                                    >
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-text-base font-semibold">{pred.name}</span>
-                                        <span className="text-xs text-text-base">
-                                          {(pred.prob * 100).toFixed(1)}%
-                                        </span>
-                                      </div>
-                                    </button>
-                                    
-                                    {pred.subclasses?.length > 0 && (
-                                      <button 
-                                        onClick={(e) => toggleSubclasses(`${itemIndex}-${predIndex}`, e)}
-                                        className="p-3 rounded-lg bg-dark-100 hover:bg-dark-200/30 text-text-muted hover:text-text-base transition-colors"
-                                      >
-                                        <SquareChevronDown className="text-text-base" size={16} />
-                                      </button>
-                                    )}
-                                  </div>
-                                  
-                                  {pred.subclasses?.length > 0 && subclassesExpanded[`${itemIndex}-${predIndex}`] && (
-                                    <div className="pl-4 mt-2 space-y-2">
-                                      {pred.subclasses.map((subclass, subIndex) => (
-                                        <button
-                                          key={subclass.id || subIndex}
-                                          onClick={() => handleDishSelect(itemIndex, predIndex, subIndex)}
-                                          className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
-                                            selectedDish?.predIndex === predIndex && selectedDish?.subclassIndex === subIndex
-                                            ? 'bg-primary-DEFAULT/50 text-white'
-                                            : 'bg-dark-300/50 hover:bg-dark-200/30 text-text-base'
-                                          }`}
-                                        >
-                                          {subclass.name}
-                                        </button>
-                                      ))}
+                    return (
+                      <div key={position} className="bg-dark-100/50 p-4 rounded-xl border border-card-border transition-all">
+                        <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleDetails(itemIndex)}>
+                          <p className="font-semibold text-text-base">
+                            Item {itemIndex + 1}:{' '}
+                            <span className="font-normal text-primary-400">
+                              {selectedDish ? selectedDish.name : 'Not selected'}
+                            </span>
+                          </p>
+                          <button className="p-1 text-text-muted hover:text-text-base">
+                            {expandedItems[itemIndex] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                          </button>
+                        </div>
+                        
+                        {expandedItems[itemIndex] && (
+                          <div className="mt-4 flex flex-col gap-2">
+                            {item.recognition_results.slice(0, 5).map((pred, predIndex) => (
+                              <div key={pred.id}>
+                                <div className="flex items-stretch gap-2">
+                                  {/* MODIFIED: Redesigned selection button */}
+                                  <button
+                                    onClick={() => handleDishSelect(itemIndex, predIndex)}
+                                    className={`group flex-grow text-left p-3 rounded-lg transition-all text-sm flex justify-between items-center ${
+                                      selectedDish?.predIndex === predIndex && selectedDish?.subclassIndex === null
+                                        ? 'bg-primary-DEFAULT/20 ring-2 ring-primary-DEFAULT'
+                                        : 'bg-dark-200 hover:bg-dark-300'
+                                    }`}
+                                  >
+                                    <div>
+                                      <span className="font-semibold text-text-base">{pred.name}</span>
+                                      {/* MODIFIED: De-emphasized percentage */}
+                                      <span className="ml-2 text-xs text-text-muted">
+                                        {(pred.prob * 100).toFixed(1)}%
+                                      </span>
                                     </div>
+                                    {/* MODIFIED: Added a checkmark for clear visual feedback */}
+                                    <CheckCircle2 size={20} className={`text-primary-DEFAULT transition-opacity ${selectedDish?.predIndex === predIndex && selectedDish?.subclassIndex === null ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`} />
+                                  </button>
+                                  
+                                  {pred.subclasses?.length > 0 && (
+                                    <button 
+                                      onClick={(e) => toggleSubclasses(`${itemIndex}-${predIndex}`, e)}
+                                      className="p-3 rounded-lg bg-dark-200 hover:bg-dark-300 text-text-muted hover:text-text-base transition-colors flex items-center"
+                                    >
+                                      <ChevronDown size={16} className={`transition-transform transform ${subclassesExpanded[`${itemIndex}-${predIndex}`] ? 'rotate-180' : ''}`} />
+                                    </button>
                                   )}
                                 </div>
-                              ))}
-                              <button
-                                onClick={() => clearItemSelection(itemIndex)}
-                                className="w-full text-center p-2 mt-2 rounded-lg bg-red-900/50 text-red-300 hover:bg-red-900/80 text-sm"
-                              >
-                                Clear Selection
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
+                                
+                                {pred.subclasses?.length > 0 && subclassesExpanded[`${itemIndex}-${predIndex}`] && (
+                                  <div className="pl-6 mt-2 space-y-2 border-l-2 border-dark-300 ml-3">
+                                    {pred.subclasses.map((subclass, subIndex) => (
+                                      <button
+                                        key={subclass.id || subIndex}
+                                        onClick={() => handleDishSelect(itemIndex, predIndex, subIndex)}
+                                        className={`w-full text-left p-2 pl-4 rounded-lg transition-colors text-xs flex justify-between items-center ${
+                                          selectedDish?.predIndex === predIndex && selectedDish?.subclassIndex === subIndex
+                                          ? 'bg-primary-DEFAULT/20 text-text-base font-semibold'
+                                          : 'bg-dark-300/50 hover:bg-dark-300 text-text-muted hover:text-text-base'
+                                        }`}
+                                      >
+                                        <span>{subclass.name}</span>
+                                        {selectedDish?.predIndex === predIndex && selectedDish?.subclassIndex === subIndex && <CheckCircle2 size={16} className="text-primary-DEFAULT" />}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {/* MODIFIED: Redesigned clear button */}
+                            {selectedDish && (
+                                <button
+                                  onClick={() => clearItemSelection(itemIndex)}
+                                  className="self-end text-sm mt-2 px-3 py-1 rounded-md text-red-400 hover:text-red-300 hover:bg-red-500/10 font-medium transition-colors"
+                                >
+                                  Clear Selection
+                                </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* MODIFIED: Actions are grouped at the bottom of the modal */}
+                <div className="space-y-3 mt-4 pt-4 border-t border-card-border">
                   <button
                     onClick={handleConfirm}
-                    disabled={loading || Object.keys(selectedDishes).length === 0}
-                    className={`w-full py-3 px-4 rounded-xl text-white font-medium transition-colors ${
-                      loading || Object.keys(selectedDishes).length === 0
+                    disabled={loading}
+                    className={`w-full py-3 px-4 rounded-xl text-white font-semibold transition-colors ${
+                      loading
                         ? 'bg-dark-300/70 cursor-not-allowed'
                         : 'bg-primary-DEFAULT hover:bg-primary-600'
                     }`}
@@ -396,17 +398,12 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
                       </span>
                     ) : 'Confirm & Log Meal'}
                   </button>
-                  <div className="flex flex-col justify-center items-center mt-4 bg-dark-100/50 p-4 rounded-xl">
-                    <p className="text-text-base text-semibold">
-                      Can't find your dish? 
-                    </p> 
-                    <button 
+                  <button 
                     onClick={() => setStep('manual')}
-                    className="text-text-base text-semibold flex items-center gap-2 bg-dark-300/50 mt-2 border border-card-border rounded-xl px-4 py-2 hover:bg-red-700/40 transition-colors">
-                      <span>Add it manually</span>
-                      <Plus size={16} className="text-text-muted" />
-                    </button>
-                  </div>
+                    className="w-full text-center py-3 px-4 rounded-xl text-text-muted font-medium border border-card-border hover:bg-dark-100 hover:text-text-base transition-colors"
+                  >
+                    Can't find your dish? Add it manually
+                  </button>
                 </div>
               </div>
             )}
@@ -425,10 +422,14 @@ export default function ImageUploadModal({ isOpen, onClose, onDishesConfirmed })
             )}
 
             {step === 'manual' && (
-               <FoodSearch
-                onClose={() => setStep('select')}
-                onSelect={handleManualSelect}
-               />
+              <div className="w-full h-full">
+                <FoodSearch
+                  onClose={() => setStep('select')}
+                  onSelect={handleManualSelect}
+                  fullWidth={true}
+                  className="max-h-[60vh] overflow-y-auto"
+                />
+              </div>
             )}
 
             {loading && (
