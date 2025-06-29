@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { calculateBMR, calculateMacroTargets, calculateTDEE } from '../utils/calculations';
 import { auth } from '../firebase'; // Import Firebase auth
 import authService from '../services/authService'; // Import auth service
+import mealPlanService from '../services/mealPlanService'; // Import meal plan service
 
 const steps = [
   { id: 1, title: 'Personal Info', icon: User },
@@ -144,6 +145,18 @@ export default function Onboarding({ onComplete }) {
         console.log('✅ Profile creation completed successfully');
         toast.success('Profile created successfully!');
         onComplete(userData);
+        
+        // Generate default meal plans after onboarding
+        try {
+          console.log('🚀 Generating default meal plans...');
+          const mealPlanResponse = await mealPlanService.generateDefaultMealPlans();
+          console.log('✅ Default meal plans generated:', mealPlanResponse);
+          toast.success('Personalized meal plans generated!');
+        } catch (error) {
+          console.error('❌ Error generating default meal plans:', error);
+          // Don't fail onboarding if meal plan generation fails
+          toast.error('Profile created successfully! Meal plans will be generated when you visit the meal plans page.');
+        }
         
       } catch (error) {
         console.error('❌ Profile save failed:', error);
