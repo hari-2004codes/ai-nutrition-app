@@ -5,15 +5,17 @@ import {
   getMeals,
   updateMeal,
   deleteMeal,
-  getMealsByDateRange
+  getMealsByDateRange,
+  deleteFoodItem
 } from "../controllers/diaryController.js";
 
 const router = Router();
 
-// Meal routes
+// Meal routes - order matters! More specific routes first
 router.post("/meals", auth, addMeal);
 router.get("/meals", auth, getMeals);
 router.get("/meals/range", auth, getMealsByDateRange);
+router.delete("/meals/:mealId/items/:itemIndex", auth, deleteFoodItem); // More specific route first
 router.put("/meals/:mealId", auth, updateMeal);
 router.delete("/meals/:mealId", auth, deleteMeal);
 

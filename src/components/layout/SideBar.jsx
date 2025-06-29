@@ -9,7 +9,6 @@ import {
   TrendingUp,
   X,
   Calendar,
-  Settings,
   BarChart3
 } from 'lucide-react';
 
@@ -18,7 +17,6 @@ const navItems = [
   { path: '/meals', icon: Utensils, label: 'Meal Log' },
   { path: '/meal-plans', icon: Calendar, label: 'Meal Plans' },
   { path: '/profile', icon: User, label: 'Profile' },
-  { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export default function Sidebar({ isOpen, isCollapsed, onClose, onToggle }) {

@@ -192,7 +192,7 @@ export default function FoodSearch({ onClose, onSelect }) {
                       <p className="text-gray-400">{foodDetails.brand}</p>
                     )}
                     <p className="text-sm text-gray-500 mt-1">
-                      Serving: {foodDetails.servingDescription}
+                      Serving: {foodDetails.servingSize}
                     </p>
                   </div>
 
