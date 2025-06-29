@@ -14,6 +14,7 @@ import ErrorBoundary from './components/general_comp/ErrorBoundary';
 import AuthModal from './components/AuthModal';
 import {auth} from './firebase'
 import {onAuthStateChanged} from 'firebase/auth'
+import authService from './services/authService';
 
 function App() {
   const [isOnboarded, setIsOnboarded] = useState(false);
@@ -29,19 +30,25 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        const unsubscribe = onAuthStateChanged(auth, (user)=>{
-          if(user){
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            console.log('🔥 Firebase user authenticated:', user.email);
             setISLoggedIn(true);
 
-            const userData = localStorage.getItem('nutritionUser');
-            setIsOnboarded(userData ? true : false);
+            // Check if user has completed onboarding
+            const hasCompletedOnboarding = authService.hasCompletedOnboarding();
+            console.log('📋 Onboarding completed:', hasCompletedOnboarding);
+            setIsOnboarded(hasCompletedOnboarding);
             
-          }else{
+          } else {
+            console.log('🚪 No Firebase user, clearing state');
             setISLoggedIn(false);
             setIsOnboarded(false);
+            // Clear any stale data
+            authService.logout();
           }
           setIsLoading(false);
-        })
+        });
 
         const savedSidebarState = localStorage.getItem('sidebarCollapsed');
         if (savedSidebarState !== null) {
@@ -58,13 +65,15 @@ function App() {
         handleResize();
         window.addEventListener('resize', handleResize);
         
-        return () => window.removeEventListener('resize', handleResize);
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          unsubscribe();
+        };
       } catch (error) {
         console.error('Error initializing app:', error);
         setIsLoading(false);
         // Don't throw here - let the app continue with default state
       }
-    
     };
 
     initializeApp();
@@ -93,8 +102,16 @@ function App() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = (userData) => {
+    console.log('✅ Onboarding completed, updating state');
     setIsOnboarded(true);
+    
+    // Update the user data in localStorage to include onboarding completion
+    const currentUser = authService.getCurrentUser();
+    if (currentUser) {
+      const updatedUser = { ...currentUser, onboardingCompleted: true };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
   };
 
    const handleAuthModalClose = () => {
