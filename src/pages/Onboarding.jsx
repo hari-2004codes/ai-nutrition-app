@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, Target, Activity, User, Apple, Trophy } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 import { calculateBMR, calculateMacroTargets, calculateTDEE } from '../utils/calculations';
 import { auth } from '../firebase'; // Import Firebase auth
 import authService from '../services/authService'; // Import auth service
-import mealPlanService from '../services/mealPlanService'; // Import meal plan service
+import axios from 'axios'; // Import axios for making HTTP requests
 
 const steps = [
   { id: 1, title: 'Personal Info', icon: User },
@@ -146,14 +146,28 @@ export default function Onboarding({ onComplete }) {
         toast.success('Profile created successfully!');
         onComplete(userData);
         
-        // Generate default meal plans after onboarding
+        // Generate personalized meal plans after onboarding
         try {
-          console.log('🚀 Generating default meal plans...');
-          const mealPlanResponse = await mealPlanService.generateDefaultMealPlans();
-          console.log('✅ Default meal plans generated:', mealPlanResponse);
+          console.log('🚀 Generating personalized meal plans...');
+          
+          // Get the auth token
+          const token = localStorage.getItem('token');
+          if (!token) {
+            console.warn('No auth token found, skipping meal plan generation');
+            return;
+          }
+          
+          const mealPlanResponse = await axios.post('/api/mealplans/generate-personalized', {}, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          console.log('✅ Personalized meal plans generated:', mealPlanResponse.data);
           toast.success('Personalized meal plans generated!');
         } catch (error) {
-          console.error('❌ Error generating default meal plans:', error);
+          console.error('❌ Error generating personalized meal plans:', error);
           // Don't fail onboarding if meal plan generation fails
           toast.error('Profile created successfully! Meal plans will be generated when you visit the meal plans page.');
         }
@@ -181,11 +195,7 @@ export default function Onboarding({ onComplete }) {
 
   return (
     <div className="min-h-screen bg-dark-100 flex items-center justify-center p-4 overflow-x-auto">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl mx-auto"
-      >
+      <div className="w-full max-w-2xl mx-auto">
         {/* Progress Steps */}
         <div className="flex justify-center mb-4 sm:mb-8">
           <div className="flex items-center space-x-1 sm:space-x-4 min-w-max py-2 overflow-x-hidden">
@@ -209,21 +219,14 @@ export default function Onboarding({ onComplete }) {
         </div>
 
         {/* Form Card */}
-        <motion.div
+        <div
           key={currentStep}
-          initial={{ x: 300, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -300, opacity: 0 }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
           className="bg-dark-200 rounded-2xl shadow-xl p-8"
         >
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <AnimatePresence mode="wait">
               {currentStep === 1 && (
-                <motion.div
-                  initial={{ x: -300, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: 300, opacity: 0 }}
+                <div
                   className="space-y-6"
                 >
                   <div className="text-center mb-8">
@@ -295,14 +298,11 @@ export default function Onboarding({ onComplete }) {
                       {errors.weight && <p className="text-error text-sm mt-1">{errors.weight.message}</p>}
                     </div>
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {currentStep === 2 && (
-                <motion.div
-                  initial={{ x: -300, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -300, opacity: 0 }}
+                <div
                   className="space-y-6"
                 >
                   <div className="text-center mb-8">
@@ -334,14 +334,11 @@ export default function Onboarding({ onComplete }) {
                     ))}
                   </div>
                   {errors.activityLevel && <p className="text-error text-sm">{errors.activityLevel.message}</p>}
-                </motion.div>
+                </div>
               )}
 
               {currentStep === 3 && (
-                <motion.div
-                  initial={{ x: -300, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -300, opacity: 0 }}
+                <div
                   className="space-y-6"
                 >
                   <div className="text-center mb-8">
@@ -371,14 +368,11 @@ export default function Onboarding({ onComplete }) {
                     ))}
                   </div>
                   {errors.goal && <p className="text-error text-sm">{errors.goal.message}</p>}
-                </motion.div>
+                </div>
               )}
               
               {currentStep === 4 && (
-                <motion.div
-                  initial={{ x: -300, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -300, opacity: 0 }}
+                <div
                   className="space-y-6"
                 >
                   <div className="text-center mb-8">
@@ -413,14 +407,11 @@ export default function Onboarding({ onComplete }) {
                     ))}
                   </div>
                   {errors.preferences && <p className="text-error text-sm">{errors.preferences.message}</p>}
-                </motion.div>
+                </div>
               )}
                   
               {currentStep === 5 && (
-                <motion.div
-                  initial={{ x: -300, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -300, opacity: 0 }}
+                <div
                   className="space-y-6"
                 >
                   <div className="text-center mb-8">
@@ -476,7 +467,7 @@ export default function Onboarding({ onComplete }) {
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
 
@@ -511,8 +502,8 @@ export default function Onboarding({ onComplete }) {
               </button>
             </div>
           </form>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

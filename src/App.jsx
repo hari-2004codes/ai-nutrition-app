@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/SideBar';
 import Dashboard from './pages/DashBoard';
@@ -102,7 +102,7 @@ function App() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  const handleOnboardingComplete = (userData) => {
+  const handleOnboardingComplete = () => {
     console.log('✅ Onboarding completed, updating state');
     setIsOnboarded(true);
     
@@ -110,7 +110,7 @@ function App() {
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
       const updatedUser = { ...currentUser, onboardingCompleted: true };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('nutritionUser', JSON.stringify(updatedUser));
     }
   };
 

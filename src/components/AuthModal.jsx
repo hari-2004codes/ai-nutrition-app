@@ -15,42 +15,6 @@ const AuthModal = ({ onClose }) => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Helper function to safely save to localStorage
-  const safeSetLocalStorage = (key, value) => {
-    try {
-      if (value && typeof value === 'object') {
-        localStorage.setItem(key, JSON.stringify(value));
-      } else if (typeof value === 'string' && value.trim() !== '') {
-        localStorage.setItem(key, value);
-      }
-      // Don't save undefined, null, or empty values
-    } catch (error) {
-      console.warn(`Failed to save ${key} to localStorage:`, error);
-    }
-  };
-
-  // Helper function to sync with backend
-  const syncWithBackend = async (idToken, isNewUser = false, userName = null) => {
-    try {
-      const payload = { idToken };
-      if (isNewUser && userName) {
-        payload.name = userName;
-        payload.isNewUser = true;
-      }
-      
-      const { data } = await api.post('/auth/firebase', payload);
-      
-      // Safely save data
-      safeSetLocalStorage('token', data.token);
-      safeSetLocalStorage('user', data.user);
-      
-      return data;
-    } catch (backendError) {
-      console.error('Backend sync error:', backendError);
-      throw new Error(backendError.response?.data?.msg || 'Failed to sync with backend');
-    }
-  };
-
   // Email/Password submit - Now uses Firebase Auth
   const handleSubmit = async e => {
     e.preventDefault();

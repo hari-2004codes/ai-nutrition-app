@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import axios from 'axios';
+import api from '../../api';
 import {
   Calendar,
   Clock,
@@ -19,7 +18,7 @@ import MealRecipeModal from './MealRecipeModal';
 export default function PersonalizedPlans({ onCustomPlanCreate }) {
   const [userData, setUserData] = useState(null);
   const [personalizedPlans, setPersonalizedPlans] = useState([]);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedMealPlan, setSelectedMealPlan] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -30,211 +29,102 @@ export default function PersonalizedPlans({ onCustomPlanCreate }) {
       const data = JSON.parse(stored);
       setUserData(data);
       
-      // Only generate personalized plans if user has completed onboarding
+      // Only fetch personalized plans if user has completed onboarding
       if (data.onboardingCompleted && data.tdee && data.goal && data.preferences) {
-        generatePersonalizedPlans(data);
+        fetchPersonalizedPlans();
       }
     }
   }, []);
 
-  const generatePersonalizedPlans = async (userProfile) => {
-    if (!userProfile) return;
-
-    setIsGenerating(true);
-    const plans = [];
-
+  const fetchPersonalizedPlans = async () => {
+    setIsLoading(true);
+    
     try {
-      // Plan 1: Weight Loss Focus
-      if (userProfile.goal === 'lose') {
-        try {
-          const weightLossPlan = await generatePlan({
-            name: "Weight Loss Journey",
-            description: "Calorie-controlled meals to help you achieve your weight loss goals",
-            duration: 7,
-            calories: Math.max(1200, userProfile.tdee - 500),
-            diet: mapPreferencesToDiet(userProfile.preferences),
-            exclude: [],
-            intolerances: getIntolerances(userProfile.preferences),
-            mealTypes: ['breakfast', 'lunch', 'dinner'],
-            difficulty: 'easy',
-            prepTime: 30,
-            ingredients: '10'
-          });
-          if (weightLossPlan) plans.push(weightLossPlan);
-        } catch (error) {
-          console.error("Error generating weight loss plan:", error);
-        }
+      // Check if we have an auth token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('❌ No authentication token found');
+        return;
       }
-
-      // Plan 2: Weight Maintenance
-      if (userProfile.goal === 'maintain') {
-        try {
-          const maintenancePlan = await generatePlan({
-            name: "Balanced Lifestyle",
-            description: "Perfectly balanced meals to maintain your current weight",
-            duration: 7,
-            calories: userProfile.tdee,
-            diet: mapPreferencesToDiet(userProfile.preferences),
-            exclude: [],
-            intolerances: getIntolerances(userProfile.preferences),
-            mealTypes: ['breakfast', 'lunch', 'dinner'],
-            difficulty: 'moderate',
-            prepTime: 45,
-            ingredients: '15'
-          });
-          if (maintenancePlan) plans.push(maintenancePlan);
-        } catch (error) {
-          console.error("Error generating maintenance plan:", error);
-        }
-      }
-
-      // Plan 3: Weight Gain/Muscle Building
-      if (userProfile.goal === 'gain') {
-        try {
-          const gainPlan = await generatePlan({
-            name: "Muscle Building Power",
-            description: "High-protein meals to support muscle growth and weight gain",
-            duration: 7,
-            calories: userProfile.tdee + 300,
-            diet: mapPreferencesToDiet(userProfile.preferences),
-            exclude: [],
-            intolerances: getIntolerances(userProfile.preferences),
-            mealTypes: ['breakfast', 'lunch', 'dinner', 'evening-snack'],
-            difficulty: 'moderate',
-            prepTime: 45,
-            ingredients: '15'
-          });
-          if (gainPlan) plans.push(gainPlan);
-        } catch (error) {
-          console.error("Error generating gain plan:", error);
-        }
-      }
-
-      // Plan 4: Quick & Easy (for busy lifestyles)
-      try {
-        const quickPlan = await generatePlan({
-          name: "Quick & Healthy",
-          description: "Fast and nutritious meals perfect for your busy lifestyle",
-          duration: 5,
-          calories: userProfile.tdee,
-          diet: mapPreferencesToDiet(userProfile.preferences),
-          exclude: [],
-          intolerances: getIntolerances(userProfile.preferences),
-          mealTypes: ['breakfast', 'lunch', 'dinner'],
-          difficulty: 'easy',
-          prepTime: 15,
-          ingredients: '8'
-        });
-        if (quickPlan) plans.push(quickPlan);
-      } catch (error) {
-        console.error("Error generating quick plan:", error);
-      }
-
-      // Plan 5: Weekend Special (more elaborate)
-      try {
-        const weekendPlan = await generatePlan({
-          name: "Weekend Feast",
-          description: "Special weekend meals with more elaborate recipes",
-          duration: 2,
-          calories: userProfile.tdee + 200,
-          diet: mapPreferencesToDiet(userProfile.preferences),
-          exclude: [],
-          intolerances: getIntolerances(userProfile.preferences),
-          mealTypes: ['breakfast', 'lunch', 'dinner'],
-          difficulty: 'advanced',
-          prepTime: 60,
-          ingredients: 'unlimited'
-        });
-        if (weekendPlan) plans.push(weekendPlan);
-      } catch (error) {
-        console.error("Error generating weekend plan:", error);
-      }
-
-      // Plan 6: Budget-Friendly
-      try {
-        const budgetPlan = await generatePlan({
-          name: "Budget-Friendly Meals",
-          description: "Delicious meals that are easy on your wallet",
-          duration: 7,
-          calories: userProfile.tdee,
-          diet: mapPreferencesToDiet(userProfile.preferences),
-          exclude: ['expensive-ingredients'],
-          intolerances: getIntolerances(userProfile.preferences),
-          mealTypes: ['breakfast', 'lunch', 'dinner'],
-          difficulty: 'easy',
-          prepTime: 30,
-          ingredients: '8'
-        });
-        if (budgetPlan) plans.push(budgetPlan);
-      } catch (error) {
-        console.error("Error generating budget plan:", error);
-      }
-
-      setPersonalizedPlans(plans);
       
-      if (plans.length === 0) {
-        console.warn("No personalized plans were generated successfully");
-      } else {
-        console.log(`Successfully generated ${plans.length} personalized plans`);
+      console.log('🔍 Fetching personalized plans with token:', token.substring(0, 20) + '...');
+      console.log('🔍 Token length:', token.length);
+      
+      // Check if user data exists
+      const userData = localStorage.getItem('nutritionUser');
+      console.log('🔍 User data exists:', !!userData);
+      
+      // First, try to fetch existing personalized plans
+      console.log('🔍 Making API call to /mealplans...');
+      const existingPlansResponse = await api.get('/mealplans');
+      console.log('✅ API call successful:', existingPlansResponse.status);
+      
+      if (existingPlansResponse.data.success) {
+        const personalizedPlans = existingPlansResponse.data.data
+          .filter(plan => plan.planType === 'personalized')
+          .map(plan => ({
+            id: plan._id,
+            name: plan.name,
+            description: plan.description,
+            duration: `${plan.duration} days`,
+            calories: `${plan.targetCalories}`,
+            difficulty: plan.difficulty.charAt(0).toUpperCase() + plan.difficulty.slice(1),
+            prepTime: `${plan.prepTime} mins`,
+            image: plan.image || getPlanImage(plan.name),
+            tags: plan.tags || [],
+            meals: plan.duration * (plan.mealTypes?.length || 3),
+            data: plan.days,
+            rating: plan.rating || 5.0,
+            generated: true,
+            personalized: true
+          }));
+        
+        if (personalizedPlans.length > 0) {
+          setPersonalizedPlans(personalizedPlans);
+          console.log(`✅ Successfully fetched ${personalizedPlans.length} existing personalized plans`);
+          return;
+        }
+      }
+      
+      // If no existing plans, try to generate new ones
+      console.log('🚀 No existing personalized plans found, generating new ones...');
+      const response = await api.post('/mealplans/generate-personalized');
+      
+      if (response.data.success) {
+        const plans = response.data.data.map(plan => ({
+          id: plan._id,
+          name: plan.name,
+          description: plan.description,
+          duration: `${plan.duration} days`,
+          calories: `${plan.targetCalories}`,
+          difficulty: plan.difficulty.charAt(0).toUpperCase() + plan.difficulty.slice(1),
+          prepTime: `${plan.prepTime} mins`,
+          image: plan.image || getPlanImage(plan.name),
+          tags: plan.tags || [],
+          meals: plan.duration * (plan.mealTypes?.length || 3),
+          data: plan.days,
+          rating: plan.rating || 5.0,
+          generated: true,
+          personalized: true
+        }));
+        
+        setPersonalizedPlans(plans);
+        console.log(`✅ Successfully generated ${plans.length} personalized plans`);
       }
     } catch (error) {
-      console.error("Error generating personalized plans:", error);
+      console.error("❌ Error fetching/generating personalized plans:", error);
+      console.error("❌ Error response:", error.response?.data);
+      console.error("❌ Error status:", error.response?.status);
+      
+      // Handle specific authentication errors
+      if (error.response?.status === 401) {
+        console.error("❌ Authentication failed - token may be invalid or expired");
+        console.error("❌ Current token:", localStorage.getItem('token')?.substring(0, 20) + '...');
+        // You might want to redirect to login or refresh the token here
+      }
     } finally {
-      setIsGenerating(false);
+      setIsLoading(false);
     }
-  };
-
-  const generatePlan = async (planConfig) => {
-    try {
-      const response = await axios.post('/api/mealplans/generate', planConfig, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      return {
-        id: Date.now() + Math.random(),
-        name: planConfig.name,
-        description: planConfig.description,
-        duration: `${planConfig.duration} days`,
-        calories: `${planConfig.calories}`,
-        difficulty: planConfig.difficulty.charAt(0).toUpperCase() + planConfig.difficulty.slice(1),
-        prepTime: `${planConfig.prepTime} mins`,
-        image: getPlanImage(planConfig.name),
-        tags: planConfig.mealTypes.map(meal => 
-          meal.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-        ),
-        meals: planConfig.duration * planConfig.mealTypes.length,
-        data: response.data.data,
-        rating: 5.0,
-        generated: true,
-        personalized: true
-      };
-    } catch (error) {
-      console.error(`Error generating plan ${planConfig.name}:`, error);
-      return null;
-    }
-  };
-
-  const mapPreferencesToDiet = (preferences) => {
-    const dietMap = {
-      'vegan': 'vegan',
-      'vegetarian': 'vegetarian',
-      'paleo': 'non-vegetarian',
-      'keto': 'non-vegetarian',
-      'mediterranean': 'non-vegetarian',
-      'gluten-free': 'vegetarian',
-      'lactose-free': 'vegetarian',
-      'no-preference': 'vegetarian'
-    };
-    return dietMap[preferences] || 'vegetarian';
-  };
-
-  const getIntolerances = (preferences) => {
-    const intolerances = [];
-    if (preferences === 'gluten-free') intolerances.push('gluten-free');
-    if (preferences === 'lactose-free') intolerances.push('lactose-free');
-    return intolerances;
   };
 
   const getPlanImage = (planName) => {
@@ -286,28 +176,21 @@ export default function PersonalizedPlans({ onCustomPlanCreate }) {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-8"
-    >
+    <div className="space-y-8">
       {/* Loading State */}
-      {isGenerating && (
+      {isLoading && (
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-DEFAULT"></div>
-          <p className="mt-2 text-text-muted">Generating your personalized meal plans...</p>
+          <p className="mt-2 text-text-muted">Loading your personalized meal plans...</p>
         </div>
       )}
 
       {/* Personalized Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {personalizedPlans.length > 0 ? (
-          personalizedPlans.map((plan, index) => (
-            <motion.div
+          personalizedPlans.map((plan) => (
+            <div
               key={plan.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 * index }}
               onClick={() => setSelectedMealPlan(plan)}
               className="group cursor-pointer"
             >
@@ -379,15 +262,15 @@ export default function PersonalizedPlans({ onCustomPlanCreate }) {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))
         ) : (
-          !isGenerating && (
+          !isLoading && (
             <div className="col-span-full text-center py-8">
               <div className="bg-dark-200/50 rounded-2xl p-6 border border-card-border">
                 <h3 className="text-xl font-bold text-text-base mb-2">No Personalized Plans Available</h3>
                 <p className="text-text-muted mb-4">
-                  We couldn't generate personalized plans at the moment. Please try creating a custom plan instead.
+                  We couldn't load your personalized plans at the moment. Please try creating a custom plan instead.
                 </p>
                 <button
                   onClick={() => setShowCreateModal(true)}
@@ -414,6 +297,6 @@ export default function PersonalizedPlans({ onCustomPlanCreate }) {
           onClose={() => setSelectedMealPlan(null)}
         />
       )}
-    </motion.div>
+    </div>
   );
 } 

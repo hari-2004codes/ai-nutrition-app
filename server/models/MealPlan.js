@@ -130,7 +130,7 @@ const mealPlanSchema = new mongoose.Schema({
   },
   planType: {
     type: String,
-    enum: ['default', 'custom', 'ai-generated'],
+    enum: ['default', 'custom', 'personalized', 'ai-generated'],
     default: 'default'
   }
 }, { timestamps: true });

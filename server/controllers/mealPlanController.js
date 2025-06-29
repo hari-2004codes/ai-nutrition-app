@@ -444,4 +444,246 @@ export const deleteMealPlan = async (req, res) => {
       message: 'Failed to delete meal plan'
     });
   }
-}; 
+};
+
+// Generate personalized meal plans for a user (called once during onboarding)
+export const generatePersonalizedMealPlans = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Get user profile
+    const profile = await Profile.findOne({ user: userId });
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found. Please complete onboarding first.'
+      });
+    }
+
+    // Check if personalized plans have already been generated
+    if (profile.personalizedPlansGenerated) {
+      // Return existing personalized plans
+      const existingPlans = await MealPlan.find({ 
+        user: userId, 
+        planType: 'personalized',
+        isActive: true 
+      }).sort({ createdAt: -1 });
+
+      return res.json({
+        success: true,
+        message: 'Personalized meal plans already exist',
+        data: existingPlans
+      });
+    }
+
+    // Calculate target calories based on goal
+    const macroTargets = calculateMacroTargets(profile.tdee, profile.goal);
+
+    // Define personalized meal plan types based on user preferences and goals
+    const personalizedPlanTypes = getPersonalizedPlanTypes(profile);
+
+    const generatedPlans = [];
+
+    for (const planType of personalizedPlanTypes) {
+      try {
+        // Generate meal plan using AI
+        const formData = {
+          name: planType.name,
+          description: planType.description,
+          duration: planType.duration,
+          calories: planType.calories,
+          diet: planType.cuisine,
+          mealTypes: planType.mealTypes,
+          difficulty: planType.difficulty,
+          prepTime: planType.prepTime,
+          ingredients: planType.ingredients,
+          exclude: planType.exclude || [],
+          intolerances: getDietaryRestrictions(profile.preferences)
+        };
+
+        let aiGeneratedPlan;
+        try {
+          aiGeneratedPlan = await generateMealPlan(formData);
+        } catch (aiError) {
+          console.error(`AI generation failed for ${planType.name}:`, aiError);
+          // Use fallback meal plan data
+          aiGeneratedPlan = getFallbackMealPlan(planType, planType.calories);
+        }
+
+        // Create meal plan document
+        const mealPlan = new MealPlan({
+          user: userId,
+          name: planType.name,
+          description: planType.description,
+          duration: planType.duration,
+          targetCalories: planType.calories,
+          cuisine: planType.cuisine,
+          dietaryRestrictions: formData.intolerances,
+          excludedIngredients: formData.exclude,
+          mealTypes: formData.mealTypes,
+          difficulty: planType.difficulty,
+          prepTime: planType.prepTime,
+          maxIngredients: planType.ingredients,
+          days: aiGeneratedPlan,
+          tags: planType.tags,
+          planType: 'personalized',
+          isGenerated: true,
+          rating: planType.rating || 4.5,
+          image: planType.image
+        });
+
+        // Calculate totals
+        mealPlan.calculateTotals();
+        await mealPlan.save();
+
+        generatedPlans.push(mealPlan);
+      } catch (error) {
+        console.error(`Error generating personalized plan ${planType.name}:`, error);
+        // Continue with other plans even if one fails
+      }
+    }
+
+    // Mark personalized plans as generated in profile
+    profile.personalizedPlansGenerated = true;
+    profile.personalizedPlansGeneratedAt = new Date();
+    await profile.save();
+
+    res.json({
+      success: true,
+      message: `Generated ${generatedPlans.length} personalized meal plans`,
+      data: generatedPlans
+    });
+
+  } catch (error) {
+    console.error('Error generating personalized meal plans:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate personalized meal plans'
+    });
+  }
+};
+
+// Helper function to get personalized plan types based on user profile
+function getPersonalizedPlanTypes(profile) {
+  const plans = [];
+
+  // Plan 1: Weight Loss Focus
+  if (profile.goal === 'lose') {
+    plans.push({
+      name: "Weight Loss Journey",
+      description: "Calorie-controlled meals to help you achieve your weight loss goals",
+      duration: 7,
+      calories: Math.max(1200, profile.tdee - 500),
+      cuisine: mapPreferencesToCuisine(profile.preferences),
+      mealTypes: ['breakfast', 'lunch', 'dinner'],
+      difficulty: 'easy',
+      prepTime: 30,
+      ingredients: '10',
+      tags: ['Weight Loss', 'Low Calorie', 'Healthy'],
+      rating: 4.5,
+      image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg'
+    });
+  }
+
+  // Plan 2: Weight Maintenance
+  if (profile.goal === 'maintain') {
+    plans.push({
+      name: "Balanced Lifestyle",
+      description: "Perfectly balanced meals to maintain your current weight",
+      duration: 7,
+      calories: profile.tdee,
+      cuisine: mapPreferencesToCuisine(profile.preferences),
+      mealTypes: ['breakfast', 'lunch', 'dinner'],
+      difficulty: 'moderate',
+      prepTime: 45,
+      ingredients: '15',
+      tags: ['Balanced', 'Maintenance', 'Healthy'],
+      rating: 4.6,
+      image: 'https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg'
+    });
+  }
+
+  // Plan 3: Weight Gain/Muscle Building
+  if (profile.goal === 'gain') {
+    plans.push({
+      name: "Muscle Building Power",
+      description: "High-protein meals to support muscle growth and weight gain",
+      duration: 7,
+      calories: profile.tdee + 300,
+      cuisine: mapPreferencesToCuisine(profile.preferences),
+      mealTypes: ['breakfast', 'lunch', 'dinner', 'evening-snack'],
+      difficulty: 'moderate',
+      prepTime: 45,
+      ingredients: '15',
+      tags: ['Muscle Building', 'High Protein', 'Gain'],
+      rating: 4.7,
+      image: 'https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg'
+    });
+  }
+
+  // Plan 4: Quick & Easy (for busy lifestyles)
+  plans.push({
+    name: "Quick & Healthy",
+    description: "Fast and nutritious meals perfect for your busy lifestyle",
+    duration: 5,
+    calories: profile.tdee,
+    cuisine: mapPreferencesToCuisine(profile.preferences),
+    mealTypes: ['breakfast', 'lunch', 'dinner'],
+    difficulty: 'easy',
+    prepTime: 15,
+    ingredients: '8',
+    tags: ['Quick', 'Easy', 'Busy Lifestyle'],
+    rating: 4.4,
+    image: 'https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg'
+  });
+
+  // Plan 5: Weekend Special (more elaborate)
+  plans.push({
+    name: "Weekend Feast",
+    description: "Special weekend meals with more elaborate recipes",
+    duration: 2,
+    calories: profile.tdee + 200,
+    cuisine: mapPreferencesToCuisine(profile.preferences),
+    mealTypes: ['breakfast', 'lunch', 'dinner'],
+    difficulty: 'advanced',
+    prepTime: 60,
+    ingredients: 'unlimited',
+    tags: ['Weekend', 'Special', 'Elaborate'],
+    rating: 4.8,
+    image: 'https://images.pexels.com/photos/1640773/pexels-photo-1640773.jpeg'
+  });
+
+  // Plan 6: Budget-Friendly
+  plans.push({
+    name: "Budget-Friendly Meals",
+    description: "Delicious meals that are easy on your wallet",
+    duration: 7,
+    calories: profile.tdee,
+    cuisine: mapPreferencesToCuisine(profile.preferences),
+    mealTypes: ['breakfast', 'lunch', 'dinner'],
+    difficulty: 'easy',
+    prepTime: 30,
+    ingredients: '8',
+    exclude: ['expensive-ingredients'],
+    tags: ['Budget', 'Affordable', 'Economical'],
+    rating: 4.3,
+    image: 'https://images.pexels.com/photos/1640775/pexels-photo-1640775.jpeg'
+  });
+
+  return plans;
+}
+
+// Helper function to map preferences to cuisine
+function mapPreferencesToCuisine(preferences) {
+  const cuisineMap = {
+    'vegan': 'vegan',
+    'vegetarian': 'vegetarian',
+    'paleo': 'non-vegetarian',
+    'keto': 'non-vegetarian',
+    'mediterranean': 'non-vegetarian',
+    'gluten-free': 'vegetarian',
+    'lactose-free': 'vegetarian',
+    'no-preference': 'vegetarian'
+  };
+  return cuisineMap[preferences] || 'vegetarian';
+} 
