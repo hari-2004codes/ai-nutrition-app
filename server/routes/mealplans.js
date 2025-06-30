@@ -4,7 +4,6 @@ import {
   getUserMealPlans, 
   getMealPlan, 
   generateDefaultMealPlans, 
-  generatePersonalizedMealPlans,
   generateCustomMealPlan, 
   updateMealPlan, 
   deleteMealPlan 
