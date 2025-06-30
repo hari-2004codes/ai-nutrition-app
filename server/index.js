@@ -23,6 +23,7 @@ import progressRoutes from './routes/progress.js';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+
 // Allow CORS for development
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
@@ -65,6 +66,6 @@ app.use((err, req, res, next) => {
 });
 
 // Start the server
-app.listen(PORT, () =>
+app.listen(PORT, '0.0.0.0' () =>
   console.log(`Server listening on http://localhost:${PORT}`)
 );
