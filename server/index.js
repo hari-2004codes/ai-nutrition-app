@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 4000;
 
 // Allow CORS for development
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'https://ai-nutrition-app-avgx.onrender.com'],
   credentials: true
 }));
 
