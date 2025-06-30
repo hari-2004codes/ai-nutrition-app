@@ -1,4 +1,4 @@
-
+# NutriTracker - AI Powered Nutrition Tracker
 A modern nutrition tracking application with image-based food recognition capabilities.
 ## Features
 
