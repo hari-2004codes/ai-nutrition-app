@@ -1,8 +1,40 @@
 import express from 'express';
 import generateMealPlan from '../services/generateMealPlan.js'; // Your service to call Groq
+import { 
+  getUserMealPlans, 
+  getMealPlan, 
+  generateDefaultMealPlans, 
+  generatePersonalizedMealPlans,
+  generateCustomMealPlan, 
+  updateMealPlan, 
+  deleteMealPlan 
+} from '../controllers/mealPlanController.js';
+import auth from '../middleware/authMiddleware.js';
+
 const router = express.Router();
 
-// Create meal plan
+// Get all meal plans for a user
+router.get('/', auth, getUserMealPlans);
+
+// Get a specific meal plan
+router.get('/:id', auth, getMealPlan);
+
+// Generate personalized meal plans (called once during onboarding)
+// router.post('/generate-personalized', auth, generatePersonalizedMealPlans);
+
+// Generate default meal plans
+router.post('/generate-default', auth, generateDefaultMealPlans);
+
+// Generate custom meal plan
+router.post('/generate-custom', auth, generateCustomMealPlan);
+
+// Update meal plan
+router.put('/:id', auth, updateMealPlan);
+
+// Delete meal plan
+router.delete('/:id', auth, deleteMealPlan);
+
+// Create meal plan (legacy endpoint for backward compatibility)
 router.post('/generate', express.json(), async (req, res, next) => {
   try {
     console.log('Received request body:', req.body);

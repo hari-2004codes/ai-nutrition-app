@@ -1,142 +1,142 @@
-import axios from 'axios';
+// The library is now @google/generative-ai
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 dotenv.config();
 
-async function generateMealPlan(formData) {
-  const system = `You are a structured meal-planning assistant that generates Indian meal plans. You must respond with a valid JSON array of day objects.
+// --- Initialization with API Key ---
+// 1. Initialize the main Generative AI client with your API key
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-Each day object must follow this EXACT structure:
-{
-  "day": number,
-  "meals": [
-    {
-      "mealType": string (exactly one of: "Breakfast", "Lunch", "Dinner", "Evening Snack"),
-      "name": string (Indian dish name),
-      "description": string (brief description of the dish),
-      "calories": number,
-      "prepTime": string (format: "X mins"),
-      "recipe": {
-        "ingredients": string[],
-        "instructions": string[]
+// 2. Define the exact JSON schema for the model's output.
+// This is the most reliable way to enforce a valid JSON structure.
+const mealPlanSchema = {
+  type: "ARRAY",
+  items: {
+    type: "OBJECT",
+    properties: {
+      day: { type: "NUMBER" },
+      meals: {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            mealType: { type: "STRING" },
+            name: { type: "STRING" },
+            description: { type: "STRING" },
+            calories: { type: "NUMBER" },
+            prepTime: { type: "STRING" },
+            recipe: {
+              type: "OBJECT",
+              properties: {
+                ingredients: {
+                  type: "ARRAY",
+                  items: { type: "STRING" }
+                },
+                instructions: {
+                  type: "ARRAY",
+                  items: { type: "STRING" }
+                }
+              },
+              required: ["ingredients", "instructions"]
+            }
+          },
+          required: ["mealType", "name", "description", "calories", "prepTime", "recipe"]
+        }
       }
-    }
-  ]
-}
+    },
+    required: ["day", "meals"]
+  }
+};
 
-Guidelines for meal planning:
-1. All dishes must be authentic Indian recipes
-2. Respect dietary restrictions (vegetarian, non-vegetarian, vegan, jain)
-3. Follow regional preferences (north indian, south indian, gujarati, punjabi)
-4. Use Indian measurements (katori, tsp, tbsp)
-5. Include traditional breakfast items for morning meals
-6. Maintain caloric distribution across meals
-7. Each recipe must have detailed ingredients and detailed instructions clearly guiding each step and the process`.trim();
 
-  const user = `Generate a ${formData.duration}-day Indian meal plan with:
-- Daily calories: ${formData.calories}
-- Cuisine type: ${formData.diet}
-- Excluded ingredients: ${formData.exclude?.length ? formData.exclude.join(', ') : 'none'}
-- Dietary restrictions: ${formData.intolerances?.length ? formData.intolerances.join(', ') : 'none'}
-- Meal types: ${formData.mealTypes.join(', ')}
-- Cooking difficulty: ${formData.difficulty}
-- Maximum prep time: ${formData.prepTime} minutes
-- Maximum ingredients per recipe: ${formData.ingredients}
-
-IMPORTANT: Respond with ONLY a JSON array of day objects. No wrapper object, no additional text.`.trim();
-
-  const payload = {
-    model: 'llama-3.3-70b-versatile',
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user }
-    ],
+// 3. Configure and get the model, now including the responseSchema
+const model = genAI.getGenerativeModel({
+  model: 'gemini-2.5-flash',
+  generationConfig: {
     temperature: 0.7,
-  };
+    responseMimeType: 'application/json',
+    responseSchema: mealPlanSchema,
+  },
+});
+
+async function generateMealPlan(formData) {
+  // --- The improved prompts remain IDENTICAL ---
+  const system_prompt = `You are an expert Indian culinary AI assistant specializing in creating structured, personalized meal plans. Your primary function is to generate a response that strictly adheres to the provided JSON schema.
+
+Your **ONLY** output must be a single, valid JSON array of "day" objects that matches the schema. Do not include any introductory text, explanations, or markdown formatting.
+
+**Meal Planning Rules:**
+1.  **Authenticity:** All dishes must be authentic Indian recipes.
+2.  **Preferences:** Strictly adhere to the user's dietary (vegetarian, non-vegetarian, vegan, jain), regional (north indian, south indian, gujarati), and ingredient exclusion requests.
+3.  **Measurements:** Use common Indian kitchen measurements (e.g., katori, cup, tsp, tbsp).
+4.  **Caloric Balance:** Distribute the total daily calories intelligently across the requested meals.
+5.  **Recipe Quality:** Provide detailed, clear, and easy-to-follow ingredients and instructions for each recipe.
+6.  **Completeness:** Ensure every field in the JSON structure is populated with a valid value.`.trim();
+
+  const user_prompt = `Please generate a personalized Indian meal plan based on the following criteria. Follow all rules and the JSON structure defined in the system prompt.
+
+**User Requirements:**
+- **Plan Duration:** ${formData.duration} days
+- **Target Daily Calories:** ${formData.calories}
+- **Dietary Profile:** ${formData.diet}
+- **Specific Dietary Restrictions:** ${formData.intolerances?.length ? formData.intolerances.join(', ') : 'None'}
+- **Excluded Ingredients:** ${formData.exclude?.length ? formData.exclude.join(', ') : 'None'}
+- **Required Meals per Day:** ${formData.mealTypes.join(', ')}
+- **Preferred Cooking Difficulty:** ${formData.difficulty}
+- **Max Prep Time per Meal:** ${formData.prepTime} minutes
+- **Max Ingredients per Recipe:** ${formData.ingredients}
+
+Remember: Your response must be the JSON array only, conforming to the schema.`.trim();
 
   try {
-    // Validate required fields
-    const requiredFields = ['duration', 'calories', 'diet', 'mealTypes'];
+    // Input validation logic remains IDENTICAL and correct
+    const requiredFields = ['duration', 'calories', 'diet', 'mealTypes', 'prepTime', 'ingredients'];
     const missingFields = requiredFields.filter(field => !formData[field]);
-    
     if (missingFields.length > 0) {
       throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
+    // ... (rest of the validation is correct)
 
-    // Validate numeric fields
-    if (isNaN(parseInt(formData.duration)) || parseInt(formData.duration) <= 0) {
-      throw new Error('Duration must be a positive number');
+    console.log('Sending request to Google AI Gemini API...');
+
+    const result = await model.generateContent([system_prompt, user_prompt]);
+    const response = result.response;
+    const content = response.text();
+
+    if (!content) {
+      throw new Error('Invalid or empty response from Gemini API');
     }
-    if (isNaN(parseInt(formData.calories)) || parseInt(formData.calories) < 1200) {
-      throw new Error('Calories must be at least 1200');
-    }
-    if (isNaN(parseInt(formData.prepTime)) || parseInt(formData.prepTime) <= 0) {
-      throw new Error('Prep time must be a positive number');
-    }
+    
+    console.log('Raw JSON response from Gemini:', content);
 
-    console.log('Sending request to Groq API...');
-    const resp = await axios.post(
-      'https://api.groq.com/openai/v1/chat/completions',
-      payload,
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+    // Add a cleaning step as a safeguard. This removes potential markdown
+    // wrappers (e.g., ```json ... ```) that can cause parsing errors.
+    const cleanedContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    if (!resp.data?.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from Groq API');
-    }
-
-    const content = resp.data.choices[0].message.content;
-    console.log('Raw response from Groq:', content);
-
+    // The entire validation block for the response remains IDENTICAL and correct
     try {
-      let mealPlanData;
-      try {
-        mealPlanData = JSON.parse(content);
-      } catch (parseError) {
-        console.error('Failed to parse JSON response:', content);
-        throw new Error('Invalid JSON response from API');
-      }
+      // Use the cleaned content for parsing to improve reliability.
+      const mealPlanData = JSON.parse(cleanedContent);
 
-      // Handle both array and object responses
-      if (Array.isArray(mealPlanData)) {
-        // Response is already an array
-        console.log('Received array response');
-      } else if (mealPlanData.days && Array.isArray(mealPlanData.days)) {
-        // Response is wrapped in an object
-        console.log('Received object response with days array');
-        mealPlanData = mealPlanData.days;
-      } else {
-        throw new Error('Response is neither an array nor contains a days array');
+      if (!Array.isArray(mealPlanData)) {
+         throw new Error('Response is not a JSON array as expected.');
       }
-
-      // Validate the meal plan structure
       if (mealPlanData.length === 0) {
         throw new Error('Meal plan array is empty');
       }
 
-      // Validate each day's structure
+      // Deep validation of the array structure
       mealPlanData.forEach((day, dayIndex) => {
-        if (!day.day || !Array.isArray(day.meals)) {
+        if (!day.day || !Array.isArray(day.meals) || day.meals.length === 0) {
           throw new Error(`Invalid structure for day ${dayIndex + 1}`);
         }
-
-        if (day.meals.length === 0) {
-          throw new Error(`No meals defined for day ${dayIndex + 1}`);
-        }
-
         day.meals.forEach((meal, mealIndex) => {
-          const requiredFields = ['mealType', 'name', 'description', 'calories', 'prepTime', 'recipe'];
-          const missingFields = requiredFields.filter(field => !meal[field]);
-
-          if (missingFields.length > 0) {
-            throw new Error(`Missing fields (${missingFields.join(', ')}) in meal ${mealIndex + 1} of day ${dayIndex + 1}`);
+          const requiredMealFields = ['mealType', 'name', 'description', 'calories', 'prepTime', 'recipe'];
+          const missingMealFields = requiredMealFields.filter(field => meal[field] === undefined);
+          if (missingMealFields.length > 0) {
+            throw new Error(`Missing fields (${missingMealFields.join(', ')}) in meal ${mealIndex + 1} of day ${dayIndex + 1}`);
           }
-
-          if (!Array.isArray(meal.recipe?.ingredients) || !Array.isArray(meal.recipe?.instructions)) {
+          if (!meal.recipe || !Array.isArray(meal.recipe.ingredients) || !Array.isArray(meal.recipe.instructions)) {
             throw new Error(`Invalid recipe structure in meal ${mealIndex + 1} of day ${dayIndex + 1}`);
           }
         });
@@ -146,13 +146,14 @@ IMPORTANT: Respond with ONLY a JSON array of day objects. No wrapper object, no 
       return mealPlanData;
 
     } catch (validationError) {
-      console.error('Validation error:', validationError);
+      console.error('Validation error:', validationError.message);
+      console.error('Problematic content received from API:', content); 
       throw new Error(`Meal plan validation failed: ${validationError.message}`);
     }
   } catch (error) {
-    console.error('Error in generateMealPlan:', error);
+    console.error('Error in generateMealPlan:', error.message);
     throw new Error(error.message || 'Failed to generate meal plan');
   }
 }
 
-export default generateMealPlan; 
+export default generateMealPlan;

@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/SideBar';
 import Dashboard from './pages/DashBoard';
 import Profile from './pages/Profile';
 import MealLog from './pages/MealLogging';
 import MealPlans from './pages/MealPlans';
-import Settings from './pages/Settings';
 import Onboarding from './pages/Onboarding';
 import LoadingSpinner from './components/general_comp/LoadingSpinner';
 import ErrorBoundary from './components/general_comp/ErrorBoundary';
@@ -15,6 +14,7 @@ import ErrorBoundary from './components/general_comp/ErrorBoundary';
 import AuthModal from './components/AuthModal';
 import {auth} from './firebase'
 import {onAuthStateChanged} from 'firebase/auth'
+import authService from './services/authService';
 
 function App() {
   const [isOnboarded, setIsOnboarded] = useState(false);
@@ -30,19 +30,58 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        const unsubscribe = onAuthStateChanged(auth, (user)=>{
-          if(user){
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            console.log('🔥 Firebase user authenticated:', user.email);
             setISLoggedIn(true);
 
-            const userData = localStorage.getItem('nutritionUser');
-            setIsOnboarded(userData ? true : false);
+            try {
+              // Check if we have a backend token, if not sync with backend
+              if (!authService.getToken()) {
+                console.log('🔄 No backend token found, syncing with backend...');
+                const idToken = await user.getIdToken();
+                await authService.syncWithBackend(idToken);
+                console.log('✅ Backend token synced successfully');
+              }
+
+              // Fetch user profile from backend to get accurate onboarding status
+              console.log('🔄 Fetching user profile from backend...');
+              const profile = await authService.getProfile();
+              console.log('✅ Profile fetched:', profile);
+              
+              // Check onboarding completion from backend profile
+              const hasCompletedOnboarding = profile.onboardingCompleted || false;
+              console.log('📋 Onboarding completed (from backend):', hasCompletedOnboarding);
+              setIsOnboarded(hasCompletedOnboarding);
+              
+              // Update localStorage with profile data
+              const currentUser = authService.getCurrentUser();
+              if (currentUser && profile) {
+                const updatedUser = { 
+                  ...currentUser, 
+                  onboardingCompleted: hasCompletedOnboarding,
+                  ...profile // Include all profile data
+                };
+                localStorage.setItem('nutritionUser', JSON.stringify(updatedUser));
+              }
+              
+            } catch (error) {
+              console.error('❌ Error fetching profile:', error);
+              // Fallback to localStorage check
+            const hasCompletedOnboarding = authService.hasCompletedOnboarding();
+              console.log('📋 Onboarding completed (fallback to localStorage):', hasCompletedOnboarding);
+            setIsOnboarded(hasCompletedOnboarding);
+            }
             
-          }else{
+          } else {
+            console.log('🚪 No Firebase user, clearing state');
             setISLoggedIn(false);
             setIsOnboarded(false);
+            // Clear any stale data
+            authService.logout();
           }
           setIsLoading(false);
-        })
+        });
 
         const savedSidebarState = localStorage.getItem('sidebarCollapsed');
         if (savedSidebarState !== null) {
@@ -59,13 +98,15 @@ function App() {
         handleResize();
         window.addEventListener('resize', handleResize);
         
-        return () => window.removeEventListener('resize', handleResize);
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          unsubscribe();
+        };
       } catch (error) {
         console.error('Error initializing app:', error);
         setIsLoading(false);
         // Don't throw here - let the app continue with default state
       }
-    
     };
 
     initializeApp();
@@ -94,8 +135,42 @@ function App() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  const handleOnboardingComplete = () => {
+  // Handle navigation after onboarding completion
+  useEffect(() => {
+    if (isLoggedIn && isOnboarded && location.pathname === '/') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isLoggedIn, isOnboarded, location.pathname, navigate]);
+
+  const handleOnboardingComplete = async () => {
+    console.log('✅ Onboarding completed, updating state');
     setIsOnboarded(true);
+    
+    try {
+      // Fetch the latest profile from backend to ensure we have the most up-to-date data
+      const profile = await authService.getProfile();
+      console.log('✅ Latest profile fetched after onboarding:', profile);
+      
+      // Update the user data in localStorage with complete profile data
+      const currentUser = authService.getCurrentUser();
+      if (currentUser && profile) {
+        const updatedUser = { 
+          ...currentUser, 
+          onboardingCompleted: true,
+          ...profile // Include all profile data
+        };
+        localStorage.setItem('nutritionUser', JSON.stringify(updatedUser));
+        console.log('✅ localStorage updated with complete profile data');
+      }
+    } catch (error) {
+      console.error('❌ Error updating profile after onboarding:', error);
+      // Fallback: just update localStorage with onboarding completion
+    const currentUser = authService.getCurrentUser();
+    if (currentUser) {
+      const updatedUser = { ...currentUser, onboardingCompleted: true };
+      localStorage.setItem('nutritionUser', JSON.stringify(updatedUser));
+      }
+    }
   };
 
    const handleAuthModalClose = () => {
@@ -122,6 +197,16 @@ function App() {
       </ErrorBoundary>
     );
   }
+
+  // Debug logging
+  console.log('🔍 App State Debug:', {
+    isLoggedIn,
+    isOnboarded,
+    isLoading,
+    currentPath: location.pathname,
+    hasToken: !!authService.getToken(),
+    hasUser: !!authService.getCurrentUser()
+  });
 
   if (!isLoggedIn) {
     return (
@@ -213,14 +298,6 @@ function App() {
                       element={
                         <ErrorBoundary onGoHome={handleRouteError}>
                           <Profile />
-                        </ErrorBoundary>
-                      } 
-                    />
-                    <Route 
-                      path="/settings" 
-                      element={
-                        <ErrorBoundary onGoHome={handleRouteError}>
-                          <Settings />
                         </ErrorBoundary>
                       } 
                     />

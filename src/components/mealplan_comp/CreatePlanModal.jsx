@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 
-export default function CreatePlanModal({ isOpen, onClose, onGenerate }) {
+export default function CreatePlanModal({ isOpen, onClose, onGenerate, isGenerating }) {
   const [formData, setFormData] = useState({
     name: '',
     duration: '7',
@@ -65,6 +65,7 @@ export default function CreatePlanModal({ isOpen, onClose, onGenerate }) {
   };
 
   const handleSubmit = () => {
+    if (isGenerating) return; // Prevent double submit
     // Validate required fields
     if (!formData.name.trim()) {
       alert('Please enter a plan name');
@@ -99,7 +100,7 @@ export default function CreatePlanModal({ isOpen, onClose, onGenerate }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-dark-200 rounded-2xl w-full max-w-3xl border border-card-border p-6 relative text-white max-h-[90vh] overflow-y-auto">
-        <button onClick={onClose} className="absolute top-4 right-4 p-1 text-text-muted hover:text-white">
+        <button onClick={isGenerating ? undefined : onClose} className="absolute top-4 right-4 p-1 text-text-muted hover:text-white" disabled={isGenerating}>
           <X size={20} />
         </button>
         <h2 className="text-2xl font-bold mb-4">Create Indian Meal Plan</h2>
@@ -260,9 +261,11 @@ export default function CreatePlanModal({ isOpen, onClose, onGenerate }) {
         <div className="mt-6 flex justify-end">
           <button
             onClick={handleSubmit}
-            className="px-6 py-2 bg-primary-DEFAULT text-white rounded-xl hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition"
+            className="px-6 py-2 bg-primary-DEFAULT text-white rounded-xl hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition flex items-center gap-2 disabled:opacity-60"
+            disabled={isGenerating}
           >
-            Generate Plan
+            {isGenerating && <span className="animate-spin h-5 w-5 border-b-2 border-white rounded-full mr-2"></span>}
+            {isGenerating ? 'Generating...' : 'Generate Plan'}
           </button>
         </div>
       </div>
