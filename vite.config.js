@@ -6,6 +6,11 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   base: '/',
   plugins: [react(), tailwindcss()],
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    minify: 'terser', // Use esbuild for faster builds
+  },
   server: {
     proxy: {
       '/api/fatsecret': {
