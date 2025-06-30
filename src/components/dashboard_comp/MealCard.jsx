@@ -5,6 +5,13 @@ import { Clock, UtensilsCrossed } from "lucide-react";
 const MealCard = ({ meal }) => {
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // Defensive: ensure macros object exists and has numbers
+  const macros = meal.macros || { protein: 0, carbs: 0, fat: 0, total: 0 };
+  // If total is not provided, sum the macros
+  if (!macros.total) {
+    macros.total = (macros.protein || 0) + (macros.carbs || 0) + (macros.fat || 0);
+  }
+
   const flipCard = () => {
     setIsFlipped(!isFlipped);
   };
@@ -68,20 +75,20 @@ const MealCard = ({ meal }) => {
                 <div className="space-y-3 flex-1">
                   <MacroBar
                     label="Protein"
-                    value={meal.macros.protein}
-                    total={meal.macros.total}
+                    value={macros.protein}
+                    total={macros.total}
                     color="from-blue-400 to-blue-600"
                   />
                   <MacroBar
                     label="Carbs"
-                    value={meal.macros.carbs}
-                    total={meal.macros.total}
+                    value={macros.carbs}
+                    total={macros.total}
                     color="from-green-400 to-green-600"
                   />
                   <MacroBar
                     label="Fat"
-                    value={meal.macros.fat}
-                    total={meal.macros.total}
+                    value={macros.fat}
+                    total={macros.total}
                     color="from-yellow-400 to-yellow-600"
                   />
                 </div>

@@ -6,6 +6,8 @@ import {
   signInWithEmailAndPassword
 } from 'firebase/auth';
 import authService from '../services/authService';
+import { X } from 'lucide-react';
+import googleIcon from '../assets/google-icon-logo-svgrepo-com (1).svg';
 
 const AuthModal = ({ onClose }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -112,22 +114,23 @@ const AuthModal = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-96 relative">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-dark-200/90 backdrop-blur-md rounded-2xl shadow-xl border border-card-border w-full max-w-md relative">
         <button 
           onClick={onClose} 
-          className="absolute top-2 right-2 text-xl hover:text-gray-700"
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-dark-300/70 text-text-muted hover:text-text-base transition-colors"
           disabled={loading}
         >
-          ×
+          <X size={20} />
         </button>
         
-        <h2 className="text-2xl font-bold mb-6 text-center">
-          {isLogin ? 'Login' : 'Sign Up'}
+        <div className="p-8">
+          <h2 className="text-2xl font-bold mb-6 text-center text-text-base">
+            {isLogin ? 'Welcome Back' : 'Create Account'}
         </h2>
         
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4">
             {error}
           </div>
         )}
@@ -136,18 +139,18 @@ const AuthModal = ({ onClose }) => {
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full mb-4 flex items-center justify-center border rounded py-2 hover:bg-gray-100 disabled:bg-gray-200 disabled:cursor-not-allowed transition-colors"
+            className="w-full mb-4 flex items-center justify-center border border-card-border rounded-xl py-3 px-4 bg-dark-100 hover:bg-dark-300 text-text-base disabled:bg-dark-300/50 disabled:cursor-not-allowed transition-colors duration-200"
         >
-          <img src="/google-logo.svg" alt="Google" className="h-5 w-5 mr-2" />
+            <img src={googleIcon} alt="Google" className="h-5 w-5 mr-2" />
           {loading ? 'Processing...' : 'Continue with Google'}
         </button>
 
-        <div className="text-center text-gray-500 mb-4">or</div>
+          <div className="text-center text-text-muted mb-4">or</div>
 
-        <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
-            <div className="mb-4">
-              <label htmlFor="name" className="block mb-1 font-medium">Name</label>
+              <div>
+                <label htmlFor="name" className="block mb-2 font-medium text-text-base">Name</label>
               <input
                 id="name"
                 type="text"
@@ -155,14 +158,14 @@ const AuthModal = ({ onClose }) => {
                 onChange={e => setName(e.target.value)}
                 required={!isLogin}
                 disabled={loading}
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:border-blue-500 disabled:bg-gray-100"
+                  className="w-full px-4 py-3 rounded-xl border border-dark-300 bg-dark-100 text-text-base placeholder-text-muted focus:outline-none focus:border-primary-DEFAULT focus:ring-2 focus:ring-primary-DEFAULT/20 transition-all duration-200 disabled:bg-dark-300/50"
                 placeholder="Enter your full name"
               />
             </div>
           )}
           
-          <div className="mb-4">
-            <label htmlFor="email" className="block mb-1 font-medium">Email</label>
+            <div>
+              <label htmlFor="email" className="block mb-2 font-medium text-text-base">Email</label>
             <input
               id="email"
               type="email"
@@ -170,37 +173,34 @@ const AuthModal = ({ onClose }) => {
               onChange={e => setEmail(e.target.value)}
               required
               disabled={loading}
-              className="w-full border rounded px-3 py-2 focus:outline-none focus:border-blue-500 disabled:bg-gray-100"
+                className="w-full px-4 py-3 rounded-xl border border-dark-300 bg-dark-100 text-text-base placeholder-text-muted focus:outline-none focus:border-primary-DEFAULT focus:ring-2 focus:ring-primary-DEFAULT/20 transition-all duration-200 disabled:bg-dark-300/50"
               placeholder="Enter your email"
             />
           </div>
           
-          <div className="mb-6">
-            <label htmlFor="password" className="block mb-1 font-medium">Password</label>
+            <div>
+              <label htmlFor="password" className="block mb-2 font-medium text-text-base">Password</label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              disabled={loading}
-              className="w-full border rounded px-3 py-2 focus:outline-none focus:border-blue-500 disabled:bg-gray-100"
+                className="w-full px-4 py-3 rounded-xl border border-dark-300 bg-dark-100 text-text-base placeholder-text-muted focus:outline-none focus:border-primary-DEFAULT focus:ring-2 focus:ring-primary-DEFAULT/20 transition-all duration-200 disabled:bg-dark-300/50"
               placeholder="Enter your password"
               minLength="6"
+                disabled={loading}
             />
           </div>
           
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-500 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white py-2 rounded transition-colors flex items-center justify-center"
+              className="w-full bg-primary-DEFAULT hover:bg-primary-600 disabled:bg-primary-DEFAULT/50 disabled:cursor-not-allowed text-white py-3 px-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center"
           >
             {loading ? (
               <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-3"></div>
                 {isLogin ? 'Logging in...' : 'Creating account...'}
               </>
             ) : (
@@ -209,7 +209,7 @@ const AuthModal = ({ onClose }) => {
           </button>
         </form>
         
-        <p className="text-center text-sm mt-4">
+          <p className="text-center text-sm mt-6 text-text-muted">
           {isLogin ? "Don't have an account?" : 'Already have one?'}{' '}
           <button
             onClick={() => {
@@ -220,11 +220,12 @@ const AuthModal = ({ onClose }) => {
               setPassword('');
             }}
             disabled={loading}
-            className="text-blue-500 hover:underline disabled:text-blue-300"
+              className="text-primary-DEFAULT hover:text-primary-400 underline disabled:text-primary-DEFAULT/50 transition-colors"
           >
             {isLogin ? 'Sign Up' : 'Login'}
           </button>
         </p>
+        </div>
       </div>
     </div>
   );
