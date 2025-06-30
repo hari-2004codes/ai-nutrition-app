@@ -30,6 +30,29 @@ class AuthService {
     return user?.onboardingCompleted || false;
   }
 
+  // Refresh user profile from backend
+  async refreshProfile() {
+    try {
+      const profile = await this.getProfile();
+      
+      // Update localStorage with latest profile data
+      const currentUser = this.getCurrentUser();
+      if (currentUser && profile) {
+        const updatedUser = { 
+          ...currentUser, 
+          onboardingCompleted: profile.onboardingCompleted || false,
+          ...profile // Include all profile data
+        };
+        localStorage.setItem('nutritionUser', JSON.stringify(updatedUser));
+      }
+      
+      return profile;
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+      throw error;
+    }
+  }
+
   // Sync Firebase user with backend
   async syncWithBackend(idToken, isNewUser = false, userName = null) {
     try {

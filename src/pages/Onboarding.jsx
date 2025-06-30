@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { calculateBMR, calculateMacroTargets, calculateTDEE } from '../utils/calculations';
 import { auth } from '../firebase'; // Import Firebase auth
 import authService from '../services/authService'; // Import auth service
-import axios from 'axios'; // Import axios for making HTTP requests
+import api from '../api';
 
 const steps = [
   { id: 1, title: 'Personal Info', icon: User },
@@ -144,25 +144,13 @@ export default function Onboarding({ onComplete }) {
         
         console.log('✅ Profile creation completed successfully');
         toast.success('Profile created successfully!');
-        onComplete(userData);
+        onComplete();
         
         // Generate personalized meal plans after onboarding
         try {
           console.log('🚀 Generating personalized meal plans...');
           
-          // Get the auth token
-          const token = localStorage.getItem('token');
-          if (!token) {
-            console.warn('No auth token found, skipping meal plan generation');
-            return;
-          }
-          
-          const mealPlanResponse = await axios.post('/api/mealplans/generate-personalized', {}, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
+          const mealPlanResponse = await api.post('/mealplans/generate-personalized', {});
           
           console.log('✅ Personalized meal plans generated:', mealPlanResponse.data);
           toast.success('Personalized meal plans generated!');

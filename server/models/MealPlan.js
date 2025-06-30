@@ -100,7 +100,7 @@ const mealPlanSchema = new mongoose.Schema({
   },
   maxIngredients: {
     type: String,
-    enum: ['5', '10', '15', 'unlimited'],
+    enum: ['5', '8', '10', '15', 'unlimited'],
     default: '10'
   },
   days: [dayPlanSchema],

@@ -35,10 +35,43 @@ function App() {
             console.log('🔥 Firebase user authenticated:', user.email);
             setISLoggedIn(true);
 
-            // Check if user has completed onboarding
+            try {
+              // Check if we have a backend token, if not sync with backend
+              if (!authService.getToken()) {
+                console.log('🔄 No backend token found, syncing with backend...');
+                const idToken = await user.getIdToken();
+                await authService.syncWithBackend(idToken);
+                console.log('✅ Backend token synced successfully');
+              }
+
+              // Fetch user profile from backend to get accurate onboarding status
+              console.log('🔄 Fetching user profile from backend...');
+              const profile = await authService.getProfile();
+              console.log('✅ Profile fetched:', profile);
+              
+              // Check onboarding completion from backend profile
+              const hasCompletedOnboarding = profile.onboardingCompleted || false;
+              console.log('📋 Onboarding completed (from backend):', hasCompletedOnboarding);
+              setIsOnboarded(hasCompletedOnboarding);
+              
+              // Update localStorage with profile data
+              const currentUser = authService.getCurrentUser();
+              if (currentUser && profile) {
+                const updatedUser = { 
+                  ...currentUser, 
+                  onboardingCompleted: hasCompletedOnboarding,
+                  ...profile // Include all profile data
+                };
+                localStorage.setItem('nutritionUser', JSON.stringify(updatedUser));
+              }
+              
+            } catch (error) {
+              console.error('❌ Error fetching profile:', error);
+              // Fallback to localStorage check
             const hasCompletedOnboarding = authService.hasCompletedOnboarding();
-            console.log('📋 Onboarding completed:', hasCompletedOnboarding);
+              console.log('📋 Onboarding completed (fallback to localStorage):', hasCompletedOnboarding);
             setIsOnboarded(hasCompletedOnboarding);
+            }
             
           } else {
             console.log('🚪 No Firebase user, clearing state');
@@ -102,15 +135,41 @@ function App() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  const handleOnboardingComplete = () => {
+  // Handle navigation after onboarding completion
+  useEffect(() => {
+    if (isLoggedIn && isOnboarded && location.pathname === '/') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isLoggedIn, isOnboarded, location.pathname, navigate]);
+
+  const handleOnboardingComplete = async () => {
     console.log('✅ Onboarding completed, updating state');
     setIsOnboarded(true);
     
-    // Update the user data in localStorage to include onboarding completion
+    try {
+      // Fetch the latest profile from backend to ensure we have the most up-to-date data
+      const profile = await authService.getProfile();
+      console.log('✅ Latest profile fetched after onboarding:', profile);
+      
+      // Update the user data in localStorage with complete profile data
+      const currentUser = authService.getCurrentUser();
+      if (currentUser && profile) {
+        const updatedUser = { 
+          ...currentUser, 
+          onboardingCompleted: true,
+          ...profile // Include all profile data
+        };
+        localStorage.setItem('nutritionUser', JSON.stringify(updatedUser));
+        console.log('✅ localStorage updated with complete profile data');
+      }
+    } catch (error) {
+      console.error('❌ Error updating profile after onboarding:', error);
+      // Fallback: just update localStorage with onboarding completion
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
       const updatedUser = { ...currentUser, onboardingCompleted: true };
       localStorage.setItem('nutritionUser', JSON.stringify(updatedUser));
+      }
     }
   };
 
@@ -138,6 +197,16 @@ function App() {
       </ErrorBoundary>
     );
   }
+
+  // Debug logging
+  console.log('🔍 App State Debug:', {
+    isLoggedIn,
+    isOnboarded,
+    isLoading,
+    currentPath: location.pathname,
+    hasToken: !!authService.getToken(),
+    hasUser: !!authService.getCurrentUser()
+  });
 
   if (!isLoggedIn) {
     return (
