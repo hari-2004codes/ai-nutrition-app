@@ -1,7 +1,7 @@
 // server/index.js
 import express from 'express';
 import dotenv from 'dotenv';
-// IMPORTANT: dotenv.config() should be called as early as possible
+
 dotenv.config();
 console.log("Environment check:");
 console.log("JWT_SECRET exists:", !!process.env.JWT_SECRET);
@@ -9,10 +9,10 @@ console.log("JWT_SECRET value:", process.env.JWT_SECRET);
 console.log("JWT_SECRET length:", process.env.JWT_SECRET?.length);
 
 import cors from 'cors';
-import connectDB from "./config/db.js"; // This should be your DB connection function
-import listEndpoints from 'express-list-endpoints'; // For debugging routes
+import connectDB from "./config/db.js"; 
+import listEndpoints from 'express-list-endpoints'; 
 
-// Import your route files
+
 import mealsRouter from './routes/meals.js';
 import mealplansRouter from './routes/mealplans.js';
 import authRoutes from "./routes/auth.js";
@@ -25,7 +25,12 @@ const PORT = process.env.PORT || 4000;
 
 // Allow CORS for development
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://nutritracker.onrender.com' // your deployed frontend
+  ],
   credentials: true
 }));
 
@@ -65,5 +70,5 @@ app.use((err, req, res, next) => {
 
 // Start the server
 app.listen(PORT, () =>
-  console.log(`Server listening on http://localhost:${PORT}`)
+  console.log(`Server listening on port ${PORT}`)
 );
