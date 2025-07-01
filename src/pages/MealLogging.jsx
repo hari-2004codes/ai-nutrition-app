@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Clock, Utensils, Camera, Trash2 } from "lucide-react";
+import { Plus, Search, Clock, Utensils, Camera, Trash2, Pencil } from "lucide-react";
 import FoodSearch from "../components/mealLog_comp/FoodSearch";
 import ImageUploadModal from "../components/mealLog_comp/ImageUploadModal";
 import { addMealEntry, getMealEntries, deleteFoodItem, updateMealEntry } from "../services/mealApi";
@@ -7,8 +7,10 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import QuantityInputModal from "../components/mealLog_comp/QuantityInputModal";
 import toast from "react-hot-toast";
+import { useLocation } from 'react-router-dom';
 
 export default function MealLog() {
+  const location = useLocation();
   const [selectedMeal, setSelectedMeal] = useState("breakfast");
   const [showFoodSearch, setShowFoodSearch] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
@@ -28,6 +30,13 @@ export default function MealLog() {
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [editingFood, setEditingFood] = useState(null);
+
+  // Set selectedMeal from navigation state if present
+  useEffect(() => {
+    if (location.state && location.state.mealType) {
+      setSelectedMeal(location.state.mealType);
+    }
+  }, [location.state]);
 
   // Fetch meals for selected date
   useEffect(() => {
@@ -379,7 +388,7 @@ export default function MealLog() {
                 <span className="font-semibold text-text-base">
                   <DatePicker
                     selected={selectedDate}
-                    onChange={date => setSelectedDate(date)}
+                    onChange={(date) => setSelectedDate(date)}
                     dateFormat="yyyy-MM-dd"
                     className="bg-dark-100 text-white rounded-lg px-3 py-2 border border-card-border focus:outline-none focus:ring-2 focus:ring-primary-DEFAULT"
                     maxDate={new Date()}
@@ -489,21 +498,25 @@ export default function MealLog() {
                         </h3>
                         <p className="text-sm text-text-muted">
                           {Number(food.quantity).toFixed(1)} {food.unit}
-                          <button
-                            className="ml-2 px-2 py-1 text-xs bg-primary-DEFAULT/30 rounded hover:bg-primary-DEFAULT/60 transition"
-                            onClick={() => setEditingFood({ food, index })}
-                            title="Edit quantity"
-                          >
-                            Edit
-                          </button>
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
+                          className="flex items-center gap-2 p-2 text-text-muted rounded-xl border border-card-border hover:bg-dark-200/50 hover:border-primary-DEFAULT transition"
+                          onClick={() => setEditingFood({ food, index })}
+                          title="Edit quantity"
+                        >
+                          <Pencil className="text-primary-DEFAULT w-5 h-5" />
+                          <span className="text-primary-DEFAULT font-medium">
+                            Edit Quantity
+                          </span>
+                        </button>
+
+                        <button
                           onClick={() =>
                             deleteFoodFromMeal(selectedMeal, index)
                           }
-                          className="relative p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all duration-200"
+                          className="relative p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-card-border hover:border-red-500 rounded-lg transition-all duration-200"
                           title="Delete this food item"
                         >
                           <Trash2 className="w-6 h-6" />
@@ -630,7 +643,8 @@ export default function MealLog() {
               onSave={async (newQuantity, servingLabel, servingGrams) => {
                 // Calculate per-gram nutrients
                 const perGram = {
-                  calories: editingFood.food.calories / editingFood.food.quantity,
+                  calories:
+                    editingFood.food.calories / editingFood.food.quantity,
                   protein: editingFood.food.protein / editingFood.food.quantity,
                   carbs: editingFood.food.carbs / editingFood.food.quantity,
                   fat: editingFood.food.fat / editingFood.food.quantity,
@@ -646,20 +660,24 @@ export default function MealLog() {
                   fat: +(perGram.fat * newQuantity).toFixed(1),
                 };
                 // Update in meals state
-                setMeals(prev => ({
+                setMeals((prev) => ({
                   ...prev,
-                  [selectedMeal]: prev[selectedMeal].map((f, i) => i === editingFood.index ? newFood : f)
+                  [selectedMeal]: prev[selectedMeal].map((f, i) =>
+                    i === editingFood.index ? newFood : f
+                  ),
                 }));
                 // Update in backend
                 const mealEntry = mealEntries[selectedMeal];
                 if (mealEntry) {
-                  const updatedItems = mealEntry.items.map((f, i) => i === editingFood.index ? newFood : f);
+                  const updatedItems = mealEntry.items.map((f, i) =>
+                    i === editingFood.index ? newFood : f
+                  );
                   await updateMealEntry(mealEntry._id, { items: updatedItems });
-                  setMealEntries(prev => ({
+                  setMealEntries((prev) => ({
                     ...prev,
-                    [selectedMeal]: { ...mealEntry, items: updatedItems }
+                    [selectedMeal]: { ...mealEntry, items: updatedItems },
                   }));
-                  toast.success('Quantity updated!');
+                  toast.success("Quantity updated!");
                 }
                 setEditingFood(null);
               }}

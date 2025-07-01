@@ -62,8 +62,9 @@ export const firebaseAuth = async (req, res) => {
     let onboardingCompleted = user.onboardingCompleted || false;
     
     if (profile) {
+      // Profile takes precedence over user model for onboarding status
       onboardingCompleted = profile.onboardingCompleted || onboardingCompleted;
-      // Update user's onboarding status if profile has it
+      // Update user's onboarding status if profile has it and user doesn't
       if (profile.onboardingCompleted && !user.onboardingCompleted) {
         user.onboardingCompleted = true;
         user.onboardingCompletedAt = profile.onboardingCompletedAt;
@@ -75,6 +76,7 @@ export const firebaseAuth = async (req, res) => {
     const token = signToken({ userId: user._id });
     
     console.log('✅ JWT token generated successfully');
+    console.log('📋 Onboarding completed status:', onboardingCompleted);
     
     res.json({
       token,

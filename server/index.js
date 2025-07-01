@@ -54,6 +54,12 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/diary", diaryRoutes);
 app.use('/api/progress', progressRoutes);
 
+import path from 'path';
+app.use(express.static(path.join(process.cwd(), '../dist')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(process.cwd(), '../dist/index.html'));
+});
+
 // List all registered routes
 console.log("\nRegistered routes:");
 const endpoints = listEndpoints(app);

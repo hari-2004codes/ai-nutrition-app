@@ -2,9 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Target } from 'lucide-react';
 
-export default function CalorieProgress({ consumed, target }) {
+export default function CalorieProgress({ consumed, target, protein = 0, carbs = 0, fat = 0 }) {
   const percentage = Math.min((consumed / target) * 100, 100);
-  const remaining = Math.max(target - consumed, 0);
+  const targetProtein = 120, targetCarbs = 200, targetFat = 60;
+  const proteinPct = Math.min((protein / targetProtein) * 100, 100);
+  const carbsPct = Math.min((carbs / targetCarbs) * 100, 100);
+  const fatPct = Math.min((fat / targetFat) * 100, 100);
 
   return (
     <div className="bg-dark-200/50 backdrop-blur-lg rounded-2xl p-6 border-2 border-card-border shadow-lg">
@@ -77,13 +80,13 @@ export default function CalorieProgress({ consumed, target }) {
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-text-muted">
             <span className="text-text-muted">Protein</span>
-            <span className="text-text-base">120g</span>
+            <span className="text-text-base">{protein}g</span>
           </div>
           <div className="w-full bg-card-border rounded-full h-2.5">
             <motion.div
               className="bg-primary-DEFAULT h-2.5 rounded-full"
               initial={{ width: 0 }}
-              animate={{ width: '60%' }}
+              animate={{ width: proteinPct + '%' }}
               transition={{ duration: 1, ease: "easeOut" }}
             />
           </div>
@@ -93,13 +96,13 @@ export default function CalorieProgress({ consumed, target }) {
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Carbs</span>
-            <span className="text-white">200g</span>
+            <span className="text-white">{carbs}g</span>
           </div>
           <div className="w-full bg-card-border rounded-full h-2">
             <motion.div
               className="bg-primary-DEFAULT h-2.5 rounded-full"
               initial={{ width: 0 }}
-              animate={{ width: '80%' }}
+              animate={{ width: carbsPct + '%' }}
               transition={{ duration: 1, ease: "easeOut" }}
             />
           </div>
@@ -109,13 +112,13 @@ export default function CalorieProgress({ consumed, target }) {
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Fat</span>
-            <span className="text-white">60g</span>
+            <span className="text-white">{fat}g</span>
           </div>
           <div className="w-full bg-card-border rounded-full h-2">
             <motion.div
               className="bg-primary-DEFAULT h-2.5 rounded-full"
               initial={{ width: 0 }}
-              animate={{ width: '30%' }}
+              animate={{ width: fatPct + '%' }}
               transition={{ duration: 1, ease: "easeOut" }}
             />
           </div>

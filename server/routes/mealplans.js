@@ -4,7 +4,6 @@ import {
   getUserMealPlans, 
   getMealPlan, 
   generateDefaultMealPlans, 
-  generatePersonalizedMealPlans,
   generateCustomMealPlan, 
   updateMealPlan, 
   deleteMealPlan 
@@ -20,7 +19,7 @@ router.get('/', auth, getUserMealPlans);
 router.get('/:id', auth, getMealPlan);
 
 // Generate personalized meal plans (called once during onboarding)
-router.post('/generate-personalized', auth, generatePersonalizedMealPlans);
+// router.post('/generate-personalized', auth, generatePersonalizedMealPlans);
 
 // Generate default meal plans
 router.post('/generate-default', auth, generateDefaultMealPlans);
