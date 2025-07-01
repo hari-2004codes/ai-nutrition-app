@@ -17,7 +17,7 @@ import {onAuthStateChanged} from 'firebase/auth'
 import authService from './services/authService';
 
 function App() {
-  const [isOnboarded, setIsOnboarded] = useState(false);
+  const [isOnboarded, setIsOnboarded] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +50,7 @@ function App() {
               console.log('✅ Profile fetched:', profile);
               
               // Check onboarding completion from backend profile
-              const hasCompletedOnboarding = profile.onboardingCompleted || false;
+              const hasCompletedOnboarding = profile.onboardingCompleted === true;
               console.log('📋 Onboarding completed (from backend):', hasCompletedOnboarding);
               setIsOnboarded(hasCompletedOnboarding);
               
@@ -67,20 +67,24 @@ function App() {
               
             } catch (error) {
               console.error('❌ Error fetching profile:', error);
-              // Fallback to localStorage check
-            const hasCompletedOnboarding = authService.hasCompletedOnboarding();
-              console.log('📋 Onboarding completed (fallback to localStorage):', hasCompletedOnboarding);
-            setIsOnboarded(hasCompletedOnboarding);
+              // Only set isOnboarded if you can determine it
+              const hasCompletedOnboarding = authService.hasCompletedOnboarding();
+              if (typeof hasCompletedOnboarding === 'boolean') {
+                setIsOnboarded(hasCompletedOnboarding);
+              } else {
+                setIsOnboarded(null); // keep spinner if unknown
+              }
+            } finally {
+              setIsLoading(false);
             }
-            
           } else {
             console.log('🚪 No Firebase user, clearing state');
             setISLoggedIn(false);
-            setIsOnboarded(false);
+            setIsOnboarded(null); // not logged in, so onboarding status is unknown
             // Clear any stale data
             authService.logout();
+            setIsLoading(false);
           }
-          setIsLoading(false);
         });
 
         const savedSidebarState = localStorage.getItem('sidebarCollapsed');
@@ -190,7 +194,7 @@ function App() {
     navigate('/dashboard', { replace: true });
   };
 
-  if (isLoading) {
+  if (isLoading || (isLoggedIn && isOnboarded === null)) {
     return (
       <ErrorBoundary onGoHome={handleAppError}>
         <LoadingSpinner />
@@ -217,7 +221,8 @@ function App() {
     );
   }
 
-  if (!isOnboarded) {
+  // Only show onboarding if you know for sure the user is not onboarded
+  if (isOnboarded === false) {
     return (
       <ErrorBoundary onGoHome={handleAppError}>
         <Onboarding onComplete={handleOnboardingComplete} />
