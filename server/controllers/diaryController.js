@@ -1,5 +1,120 @@
 // server/controllers/diaryController.js
 import MealEntry from "../models/MealEntry.js";
+import Profile from "../models/Profile.js";
+import generateFoodSuggestion from "../services/generateFoodSuggestion.js";
+
+// Helper function to generate AI suggestions for food items
+const generateAndStoreSuggestions = async (mealEntry, userId) => {
+  try {
+    // Check if Gemini API key is configured
+    if (!process.env.GEMINI_API_KEY) {
+      console.log('⚠️ GEMINI_API_KEY not configured, skipping suggestion generation');
+      return mealEntry;
+    }
+
+    // Get user profile for personalized suggestions
+    const profile = await Profile.findOne({ user: userId });
+    if (!profile) {
+      console.log('⚠️ No profile found for user, skipping suggestion generation');
+      return mealEntry;
+    }
+
+    // Calculate current daily intake from all meals
+    const dateStr = mealEntry.date.toISOString().split('T')[0];
+    const allMealsToday = await MealEntry.find({ 
+      user: userId, 
+      date: { 
+        $gte: new Date(dateStr), 
+        $lt: new Date(new Date(dateStr).getTime() + 24 * 60 * 60 * 1000) 
+      } 
+    });
+
+    const dailyIntake = allMealsToday
+      .flatMap(meal => meal.items)
+      .reduce(
+        (acc, item) => ({
+          calories: acc.calories + (item.calories || 0),
+          protein: acc.protein + (item.protein || 0),
+          carbs: acc.carbs + (item.carbs || 0),
+          fat: acc.fat + (item.fat || 0),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+
+    // Prepare user profile data
+    const userProfile = {
+      bmr: profile.bmr,
+      tdee: profile.tdee,
+      age: profile.age,
+      gender: profile.gender,
+      activityLevel: profile.activityLevel,
+      goal: profile.goal,
+      preferences: profile.preferences,
+      dailyIntake
+    };
+
+    // Generate suggestions for each item that doesn't have one
+    const updatedItems = await Promise.all(
+      mealEntry.items.map(async (item, index) => {
+        if (item.suggestion) {
+          console.log(`✅ Item ${index + 1} already has suggestion: ${item.name}`);
+          return item;
+        }
+
+        try {
+          console.log(`🤖 Generating suggestion for: ${item.name}`);
+          
+          const foodData = {
+            name: item.name,
+            quantity: item.quantity,
+            unit: item.unit,
+            calories: item.calories,
+            protein: item.protein,
+            carbs: item.carbs,
+            fat: item.fat,
+            mealType: mealEntry.mealType
+          };
+
+          const suggestion = await generateFoodSuggestion(foodData, userProfile);
+          console.log(`✅ Generated suggestion for ${item.name}:`, suggestion.healthiness);
+          
+          return {
+            ...item,
+            suggestion: {
+              ...suggestion,
+              generatedAt: new Date()
+            }
+          };
+        } catch (error) {
+          console.error(`❌ Failed to generate suggestion for ${item.name}:`, error.message);
+          return item;
+        }
+      })
+    );
+
+    // Update the meal entry with suggestions
+    console.log('🔄 Updating meal with generated suggestions...');
+    const updatedMeal = await MealEntry.findByIdAndUpdate(
+      mealEntry._id,
+      { items: updatedItems },
+      { new: true }
+    );
+
+    const itemsWithSuggestions = updatedItems.filter(item => item.suggestion).length;
+    console.log(`✅ Successfully generated and saved suggestions for ${itemsWithSuggestions}/${updatedItems.length} items`);
+    
+    // Verify the suggestions were saved
+    const verifyMeal = await MealEntry.findById(mealEntry._id);
+    const savedSuggestions = verifyMeal.items.filter(item => item.suggestion).length;
+    console.log(`🔍 Verification: ${savedSuggestions} suggestions found in database`);
+    
+    return updatedMeal;
+
+  } catch (error) {
+    console.error('❌ Error generating suggestions:', error.message);
+    return mealEntry;
+  }
+};
 
 // — Meals —
 export const addMeal = async (req, res) => {
@@ -69,11 +184,12 @@ export const addMeal = async (req, res) => {
     
     console.log("🔍 Meal object before save:", meal);
     
-    await meal.save();
-    
-    console.log("✅ Meal saved successfully:", meal);
-    
-    res.status(201).json(meal);
+    // Save the meal first, then generate AI suggestions in the background
+    const savedMeal = await meal.save();
+    console.log("✅ Meal saved successfully:", savedMeal._id);
+
+    // Return the saved meal (suggestions will be generated separately via new service)
+    res.status(201).json(savedMeal);
   } catch (err) {
     console.error("❌ Add Meal Error:", err);
     console.error("Error details:", err.message);
@@ -131,6 +247,12 @@ export const getMeals = async (req, res) => {
     
     console.log("✅ Found meals:", meals.length);
     
+    // Log suggestion data for debugging
+    meals.forEach(meal => {
+      const itemsWithSuggestions = meal.items.filter(item => item.suggestion).length;
+      console.log(`🔍 ${meal.mealType}: ${meal.items.length} items, ${itemsWithSuggestions} with suggestions`);
+    });
+    
     res.json(meals);
   } catch (err) {
     console.error("❌ Get Meals Error:", err);
@@ -156,6 +278,7 @@ export const updateMeal = async (req, res) => {
       { new: true, runValidators: true }
     );
     
+    // Return the updated meal (suggestions handled by separate service)
     res.json(updatedMeal);
   } catch (err) {
     console.error("Update Meal Error:", err);

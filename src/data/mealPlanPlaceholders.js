@@ -5,7 +5,7 @@ export const northIndianVegPlan = [
     day: 1,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Aloo Paratha with Curd",
         description: "A classic North Indian breakfast of whole wheat flatbread stuffed with a spiced potato mixture, served with a side of plain curd.",
         calories: 450,
@@ -16,7 +16,7 @@ export const northIndianVegPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Rajma Chawal",
         description: "A comforting and protein-rich meal of red kidney beans cooked in a thick, flavorful tomato-based gravy, served with steamed basmati rice.",
         calories: 600,
@@ -27,7 +27,7 @@ export const northIndianVegPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Paneer Butter Masala with Roti",
         description: "Cubes of Indian cottage cheese (paneer) in a rich, creamy, and mildly sweet gravy of tomatoes, butter, and cashews. Served with whole wheat rotis.",
         calories: 550,
@@ -43,7 +43,7 @@ export const northIndianVegPlan = [
     day: 2,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Poha",
         description: "A light and savory breakfast made from flattened rice, tempered with mustard seeds, turmeric, and garnished with coriander and lemon.",
         calories: 350,
@@ -54,7 +54,7 @@ export const northIndianVegPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Chole Bhature",
         description: "A popular Punjabi dish consisting of spicy chickpea curry (chole) served with fluffy, deep-fried bread (bhature).",
         calories: 700,
@@ -65,7 +65,7 @@ export const northIndianVegPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Dal Makhani with Jeera Rice",
         description: "A rich and creamy lentil dish made with whole black lentils (urad dal) and kidney beans (rajma), slow-cooked with butter and cream.",
         calories: 650,
@@ -81,7 +81,7 @@ export const northIndianVegPlan = [
     day: 3,
     meals: [
         {
-            mealType: "Breakfast",
+            mealType: "breakfast",
             name: "Besan Cheela",
             description: "A savory pancake made from gram flour (besan), mixed with spices and finely chopped vegetables like onions and tomatoes.",
             calories: 380,
@@ -92,7 +92,7 @@ export const northIndianVegPlan = [
             }
         },
         {
-            mealType: "Lunch",
+            mealType: "lunch",
             name: "Kadhi Pakora with Rice",
             description: "A tangy yogurt-based curry (kadhi) containing deep-fried gram flour fritters (pakoras), best enjoyed with steamed rice.",
             calories: 550,
@@ -103,7 +103,7 @@ export const northIndianVegPlan = [
             }
         },
         {
-            mealType: "Dinner",
+            mealType: "dinner",
             name: "Palak Paneer with Naan",
             description: "A popular Indian dish of paneer in a smooth, creamy, and vibrant spinach gravy. Served with soft, leavened bread (naan).",
             calories: 600,
@@ -119,7 +119,7 @@ export const northIndianVegPlan = [
     day: 4,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Moong Dal Cheela",
         description: "A nutritious and protein-packed savory crepe made from a batter of soaked yellow lentils (moong dal), lightly spiced.",
         calories: 360,
@@ -130,7 +130,7 @@ export const northIndianVegPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Vegetable Pulao with Raita",
         description: "A fragrant one-pot rice dish made with basmati rice, mixed vegetables, and a blend of whole spices.",
         calories: 500,
@@ -141,7 +141,7 @@ export const northIndianVegPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Malai Kofta",
         description: "A festive dish of deep-fried potato and paneer dumplings (koftas) served in a rich, creamy, and mildly spicy tomato-cashew gravy.",
         calories: 680,
@@ -157,7 +157,7 @@ export const northIndianVegPlan = [
     day: 5,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Masala Dosa (North Indian Style)",
         description: "A thin, crispy crepe made from rice and lentil batter, filled with a savory potato masala. Adapted with common North Indian spices.",
         calories: 420,
@@ -168,7 +168,7 @@ export const northIndianVegPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Baingan Bharta with Roti",
         description: "A smoky and flavorful dish made from fire-roasted eggplant, mashed and cooked with onions, tomatoes, and spices.",
         calories: 480,
@@ -179,7 +179,7 @@ export const northIndianVegPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Shahi Paneer",
         description: "A royal Mughlai dish where paneer is cooked in a rich, creamy gravy made of onions, nuts, and yogurt. It's less tomato-heavy than Paneer Butter Masala.",
         calories: 620,
@@ -198,7 +198,7 @@ export const southIndianNonVegPlan = [
     day: 1,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Idli with Sambar and Chutney",
         description: "Steamed, fluffy rice cakes (idli) served with a lentil-based vegetable stew (sambar) and coconut chutney. A staple South Indian breakfast.",
         calories: 400,
@@ -209,7 +209,7 @@ export const southIndianNonVegPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Chicken Chettinad with Rice",
         description: "A fiery and aromatic chicken curry from the Chettinad region of Tamil Nadu, made with a special blend of roasted spices and coconut.",
         calories: 650,
@@ -220,7 +220,7 @@ export const southIndianNonVegPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Malabar Fish Curry with Appam",
         description: "A tangy and creamy fish curry from Kerala, cooked in a coconut milk base with tamarind (kudampuli). Served with soft, lacy rice hoppers (appam).",
         calories: 580,
@@ -236,7 +236,7 @@ export const southIndianNonVegPlan = [
     day: 2,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Masala Dosa",
         description: "A classic South Indian breakfast of a crispy rice and lentil crepe filled with a spiced potato mixture, served with sambar and chutneys.",
         calories: 450,
@@ -247,7 +247,7 @@ export const southIndianNonVegPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Hyderabadi Mutton Biryani",
         description: "A world-famous, aromatic rice dish where marinated mutton is slow-cooked (dum) with long-grain basmati rice and a blend of rich spices.",
         calories: 750,
@@ -258,7 +258,7 @@ export const southIndianNonVegPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Kerala Prawn Fry (Chemmeen Varuthathu)",
         description: "Spicy and succulent prawns marinated in a blend of Kerala spices and shallow-fried until crisp and flavorful. A perfect side dish or appetizer.",
         calories: 480,
@@ -274,7 +274,7 @@ export const southIndianNonVegPlan = [
     day: 3,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Puttu with Kadala Curry",
         description: "A traditional Kerala breakfast of steamed cylinders of ground rice layered with coconut (Puttu), served with a spicy black chickpea curry (Kadala Curry).",
         calories: 500,
@@ -285,7 +285,7 @@ export const southIndianNonVegPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Andhra Chicken Curry with Ghee Rice",
         description: "A spicy and tangy chicken curry from Andhra Pradesh, known for its liberal use of green chilies and Guntur red chilies.",
         calories: 680,
@@ -296,7 +296,7 @@ export const southIndianNonVegPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Egg Roast with Parotta",
         description: "Hard-boiled eggs cooked in a thick, spicy, and caramelized onion-tomato masala. A popular dish in Kerala, best paired with flaky Malabar parottas.",
         calories: 620,
@@ -312,7 +312,7 @@ export const southIndianNonVegPlan = [
     day: 4,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Rava Upma",
         description: "A thick and savory porridge made from dry-roasted semolina (rava or suji), cooked with vegetables and tempered with spices.",
         calories: 380,
@@ -323,7 +323,7 @@ export const southIndianNonVegPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Fish Molee with Matta Rice",
         description: "A mild and creamy fish stew from Kerala, where fish is cooked in a flavorful coconut milk gravy with mild spices like pepper and turmeric. Served with wholesome Matta rice.",
         calories: 600,
@@ -334,7 +334,7 @@ export const southIndianNonVegPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Kothu Parotta (Egg)",
         description: "A popular South Indian street food where shredded parotta is stir-fried with egg, meat, or vegetables and a spicy masala.",
         calories: 650,
@@ -350,7 +350,7 @@ export const southIndianNonVegPlan = [
     day: 5,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Ven Pongal",
         description: "A savory and creamy South Indian porridge made with rice and moong dal, flavored with black pepper, cumin, and ghee.",
         calories: 430,
@@ -361,7 +361,7 @@ export const southIndianNonVegPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Mutton Sukka with Curd Rice",
         description: "A dry mutton preparation where tender mutton pieces are pan-roasted with a generous amount of shallots, spices, and pepper, creating a deeply flavorful dish. Paired with cooling curd rice.",
         calories: 720,
@@ -372,7 +372,7 @@ export const southIndianNonVegPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Goan Fish Curry Rice",
         description: "A tangy and spicy fish curry from Goa, made with a coconut and red chili paste. A staple in Goan cuisine, served with steamed rice.",
         calories: 640,
@@ -392,7 +392,7 @@ export const highProteinVeganPlan = [
     day: 1,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Tofu Bhurji with Whole Wheat Toast",
         description: "A vegan take on scrambled eggs, made with crumbled firm tofu, onions, tomatoes, and Indian spices. High in protein and delicious.",
         calories: 420,
@@ -403,7 +403,7 @@ export const highProteinVeganPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Chana Palak (Chickpea and Spinach Curry) with Brown Rice",
         description: "A nutritious and flavorful curry made with protein-rich chickpeas and iron-rich spinach in a spiced tomato-onion gravy.",
         calories: 550,
@@ -414,7 +414,7 @@ export const highProteinVeganPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Soya Chaap Masala with Vegan Naan",
         description: "Meaty and tender soya chaap (soybean chunks on a stick) cooked in a rich, creamy, and dairy-free tomato and cashew-based gravy.",
         calories: 600,
@@ -430,7 +430,7 @@ export const highProteinVeganPlan = [
     day: 2,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Oats Upma",
         description: "A healthy, savory, and quick breakfast made with rolled oats, vegetables, and a classic South Indian tempering. A vegan and fiber-rich start to the day.",
         calories: 380,
@@ -441,7 +441,7 @@ export const highProteinVeganPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Lentil and Vegetable Curry (Dalma)",
         description: "An Oriya specialty, this is a no-onion-garlic, one-pot dish of lentils and mixed vegetables cooked together and tempered with spices.",
         calories: 500,
@@ -452,7 +452,7 @@ export const highProteinVeganPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Mushroom Matar Masala with Roti",
         description: "A delicious and savory curry made with mushrooms and green peas in a spicy, tangy onion-tomato gravy. Naturally vegan and satisfying.",
         calories: 520,
@@ -468,7 +468,7 @@ export const highProteinVeganPlan = [
     day: 3,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Besan (Gram Flour) Cheela with Mint Chutney",
         description: "Savory, thin pancakes made from gram flour and spices, sometimes with added vegetables. A quick, protein-rich, and gluten-free vegan breakfast.",
         calories: 390,
@@ -479,7 +479,7 @@ export const highProteinVeganPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Rajma Masala (Kidney Bean Curry) with Quinoa",
         description: "A hearty and popular North Indian curry made with red kidney beans in a thick onion-tomato gravy. Served with fluffy quinoa for a complete protein meal.",
         calories: 580,
@@ -490,7 +490,7 @@ export const highProteinVeganPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Vegetable Korma (Vegan)",
         description: "A rich and creamy mixed vegetable curry. This vegan version uses a cashew and coconut base instead of dairy for a luscious texture.",
         calories: 550,
@@ -506,7 +506,7 @@ export const highProteinVeganPlan = [
     day: 4,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Vegan Akki Roti",
         description: "A savory flatbread from Karnataka made with rice flour and mixed with grated vegetables like carrots and dill leaves. Pan-fried until crisp.",
         calories: 410,
@@ -517,7 +517,7 @@ export const highProteinVeganPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Black Eyed Peas Curry (Lobia Masala) with Millet Roti",
         description: "A flavorful and protein-rich curry made with black-eyed peas in a tangy tomato-based gravy.",
         calories: 530,
@@ -528,7 +528,7 @@ export const highProteinVeganPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Baingan Bharta (Smoky Eggplant Mash)",
         description: "A classic North Indian dish where eggplant is roasted over a flame for a smoky flavor, then mashed and cooked with spices. Naturally vegan.",
         calories: 480,
@@ -544,7 +544,7 @@ export const highProteinVeganPlan = [
     day: 5,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Quinoa Poha",
         description: "A modern, high-protein twist on the classic poha, using cooked quinoa instead of flattened rice. Light, fluffy, and nutritious.",
         calories: 400,
@@ -555,7 +555,7 @@ export const highProteinVeganPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Masoor Dal (Red Lentil Curry) with Jeera Rice",
         description: "A simple, quick, and comforting red lentil curry, tempered with spices like cumin and garlic. A staple protein source in Indian households.",
         calories: 510,
@@ -566,7 +566,7 @@ export const highProteinVeganPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Stuffed Bell Peppers (Bharwa Shimla Mirch)",
         description: "Bell peppers cored and stuffed with a savory and spiced mixture of mashed potatoes, peas, and tofu, then baked or pan-fried until tender.",
         calories: 490,
@@ -585,7 +585,7 @@ export const quickJainPlan = [
     day: 1,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Jain Poha",
         description: "A classic breakfast of flattened rice made without onions or potatoes. Tempered with mustard seeds, curry leaves, and garnished with sev.",
         calories: 320,
@@ -596,7 +596,7 @@ export const quickJainPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Sev Tameta nu Shaak with Bajra Roti",
         description: "A popular Gujarati and Kathiyawadi curry made with tomatoes and sev (crispy gram flour noodles). It's tangy, spicy, and quick to make.",
         calories: 450,
@@ -607,7 +607,7 @@ export const quickJainPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Moong Dal Khichdi",
         description: "A light, wholesome, and easy-to-digest one-pot meal of rice and yellow lentils. A perfect comfort food for dinner.",
         calories: 400,
@@ -623,7 +623,7 @@ export const quickJainPlan = [
     day: 2,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Methi Thepla",
         description: "Soft, thin flatbreads made from whole wheat flour, gram flour, and fresh fenugreek leaves (methi). A travel-friendly and healthy breakfast.",
         calories: 380,
@@ -634,7 +634,7 @@ export const quickJainPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Kela nu Shaak (Raw Banana Curry) with Phulka",
         description: "A simple and delicious Jain curry made with raw bananas, cooked in a base of yogurt and mild spices.",
         calories: 420,
@@ -645,7 +645,7 @@ export const quickJainPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Paneer Bhurji (Jain Style) with Paratha",
         description: "Scrambled Indian cottage cheese (paneer) cooked with tomatoes, capsicum, and spices, without any onion or garlic.",
         calories: 500,
@@ -661,7 +661,7 @@ export const quickJainPlan = [
     day: 3,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Jain Vegetable Sandwich",
         description: "A quick and refreshing sandwich with a filling of cucumber, tomato, and capsicum, seasoned with green chutney and chaat masala.",
         calories: 300,
@@ -672,7 +672,7 @@ export const quickJainPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Gatta Curry with Rice",
         description: "A Rajasthani specialty where gram flour dumplings (gatta) are cooked in a tangy yogurt-based curry. Made without onion or garlic.",
         calories: 520,
@@ -683,7 +683,7 @@ export const quickJainPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Tomato Rasam with Papad",
         description: "A light and tangy South Indian soup made with tomatoes and spices, without using any garlic. Served with roasted papad.",
         calories: 250,
@@ -699,7 +699,7 @@ export const quickJainPlan = [
     day: 4,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Instant Rava Idli (Jain)",
         description: "Steamed semolina cakes that require no fermentation. Made with yogurt and tempered with spices. A quick and light breakfast.",
         calories: 350,
@@ -710,7 +710,7 @@ export const quickJainPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Cabbage and Peas Stir Fry (Kobi Batana) with Roti",
         description: "A simple, quick, and healthy stir-fry of shredded cabbage and green peas, tempered with mustard seeds and turmeric.",
         calories: 380,
@@ -721,7 +721,7 @@ export const quickJainPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Dal Fry (Jain) with Jeera Rice",
         description: "A simple yellow lentil curry (toor dal) prepared without onion or garlic, using tomatoes and a simple tempering of cumin and hing.",
         calories: 460,
@@ -737,7 +737,7 @@ export const quickJainPlan = [
     day: 5,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Masala Toast (Jain)",
         description: "Bread slices topped with a quick-to-make savory topping of semolina, yogurt, and finely chopped vegetables like capsicum and tomato.",
         calories: 340,
@@ -748,7 +748,7 @@ export const quickJainPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Tindora Fry (Tendli Bhaji) with Roti",
         description: "A simple and homely stir-fry made with ivy gourd (tindora/tendli), seasoned with basic Indian spices.",
         calories: 410,
@@ -759,7 +759,7 @@ export const quickJainPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Gujarati Kadhi with Pulao",
         description: "A sweet and tangy thin yogurt-based soup, thickened with gram flour. This Jain version is made without ginger.",
         calories: 480,
@@ -778,7 +778,7 @@ export const panIndianBalancedPlan = [
     day: 1,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Idli Sambar (South Indian)",
         description: "Classic South Indian steamed rice cakes served with a flavorful lentil and vegetable stew.",
         calories: 400,
@@ -789,7 +789,7 @@ export const panIndianBalancedPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Dal Tadka with Rice (North Indian)",
         description: "A staple vegetarian lentil curry (yellow dal) tempered with ghee, cumin, and spices. Served with steamed basmati rice.",
         calories: 550,
@@ -800,7 +800,7 @@ export const panIndianBalancedPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Goan Prawn Curry (West Indian)",
         description: "A tangy and spicy prawn curry made with a coconut and red chili base, characteristic of Goan cuisine.",
         calories: 600,
@@ -816,7 +816,7 @@ export const panIndianBalancedPlan = [
     day: 2,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Poha (West Indian)",
         description: "A light and savory breakfast from Maharashtra made from flattened rice, tempered with mustard seeds and turmeric.",
         calories: 350,
@@ -827,7 +827,7 @@ export const panIndianBalancedPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Hyderabadi Chicken Biryani (South Indian)",
         description: "A famous aromatic rice dish where marinated chicken is slow-cooked with basmati rice and a blend of rich spices.",
         calories: 720,
@@ -838,7 +838,7 @@ export const panIndianBalancedPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Palak Paneer (North Indian)",
         description: "A popular vegetarian dish of Indian cottage cheese (paneer) in a smooth and creamy spinach gravy.",
         calories: 580,
@@ -854,7 +854,7 @@ export const panIndianBalancedPlan = [
     day: 3,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Aloo Paratha (North Indian)",
         description: "Whole wheat flatbread stuffed with a spiced potato mixture, shallow-fried with ghee. A hearty breakfast.",
         calories: 450,
@@ -865,7 +865,7 @@ export const panIndianBalancedPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Macher Jhol (East Indian)",
         description: "A traditional Bengali fish curry that is light, flavorful, and made in a thin, soupy gravy with potatoes and cauliflower.",
         calories: 550,
@@ -876,7 +876,7 @@ export const panIndianBalancedPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Vegetable Korma (South Indian)",
         description: "A mild and creamy mixed vegetable curry made with a coconut, cashew, and poppy seed paste.",
         calories: 520,
@@ -892,7 +892,7 @@ export const panIndianBalancedPlan = [
     day: 4,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Besan Cheela (Pan-Indian)",
         description: "Quick and savory pancakes made from gram flour (besan), often with chopped onions and tomatoes. Vegan and gluten-free.",
         calories: 380,
@@ -903,7 +903,7 @@ export const panIndianBalancedPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Rajma Chawal (North Indian)",
         description: "A comforting vegetarian meal of red kidney beans in a thick gravy, served with steamed rice.",
         calories: 600,
@@ -914,7 +914,7 @@ export const panIndianBalancedPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Chicken 65 (South Indian)",
         description: "A spicy, deep-fried chicken dish originating from Chennai. Bite-sized chicken pieces are marinated with spices and fried until crisp.",
         calories: 650,
@@ -930,7 +930,7 @@ export const panIndianBalancedPlan = [
     day: 5,
     meals: [
       {
-        mealType: "Breakfast",
+        mealType: "breakfast",
         name: "Masala Dosa (South Indian)",
         description: "A crispy crepe made from a fermented rice and lentil batter, filled with a savory potato masala.",
         calories: 420,
@@ -941,7 +941,7 @@ export const panIndianBalancedPlan = [
         }
       },
       {
-        mealType: "Lunch",
+        mealType: "lunch",
         name: "Kadhi Pakora with Rice (North/West Indian)",
         description: "A tangy yogurt and gram flour-based curry (kadhi) containing fried gram flour dumplings (pakoras).",
         calories: 550,
@@ -952,7 +952,7 @@ export const panIndianBalancedPlan = [
         }
       },
       {
-        mealType: "Dinner",
+        mealType: "dinner",
         name: "Laal Maas (West Indian - Rajasthani)",
         description: "A fiery mutton curry from Rajasthan, known for its vibrant red color from Mathania chilies and its smoky flavor.",
         calories: 750,

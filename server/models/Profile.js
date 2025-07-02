@@ -33,11 +33,7 @@ const profileSchema = new mongoose.Schema({
   tdee: Number,
 
   onboardingCompleted: { type: Boolean, default: false },
-  onboardingCompletedAt: Date,
-  
-  // Track if personalized meal plans have been generated
-  personalizedPlansGenerated: { type: Boolean, default: false },
-  personalizedPlansGeneratedAt: Date
+  onboardingCompletedAt: Date
 }, { timestamps: true });
 
 export default mongoose.model('Profile', profileSchema);

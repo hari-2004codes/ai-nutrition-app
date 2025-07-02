@@ -65,8 +65,8 @@ export default function CalorieProgress({ consumed, target, protein = 0, carbs =
               transition={{ delay: 0.5, duration: 0.5 }}
               className="text-center"
             >
-              <div className="text-3xl font-bold text-white">{consumed}</div>
-              <div className="text-sm text-gray-400">/ {target} kcal</div>
+              <div className="text-3xl font-bold text-white">{consumed.toFixed(1)}</div>
+              <div className="text-sm text-gray-400">/ {target.toFixed(1)} kcal</div>
             </motion.div>
           </div>
         </div>

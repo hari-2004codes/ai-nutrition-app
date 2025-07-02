@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Clock, Utensils, Camera, Trash2, Pencil } from "lucide-react";
+import { Plus, Search, Clock, Utensils, Camera, Trash2, Pencil, Sparkles } from "lucide-react";
 import FoodSearch from "../components/mealLog_comp/FoodSearch";
 import ImageUploadModal from "../components/mealLog_comp/ImageUploadModal";
-import { addMealEntry, getMealEntries, deleteFoodItem, updateMealEntry } from "../services/mealApi";
+import FoodSuggestionCard from "../components/mealLog_comp/FoodSuggestionCard";
+import { addMealEntry, getMealEntries, deleteFoodItem, updateMealEntry, generateFoodSuggestion, getFoodSuggestion, generateFoodHash, deleteFoodSuggestion } from "../services/mealApi";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import QuantityInputModal from "../components/mealLog_comp/QuantityInputModal";
@@ -30,6 +31,12 @@ export default function MealLog() {
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [editingFood, setEditingFood] = useState(null);
+  
+  // Food suggestion states
+  const [currentSuggestion, setCurrentSuggestion] = useState(null);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [selectedFoodForSuggestion, setSelectedFoodForSuggestion] = useState(null);
+  const [suggestionError, setSuggestionError] = useState(false);
 
   // Set selectedMeal from navigation state if present
   useEffect(() => {
@@ -37,6 +44,179 @@ export default function MealLog() {
       setSelectedMeal(location.state.mealType);
     }
   }, [location.state]);
+
+  // Reset suggestion card when meal type changes
+  useEffect(() => {
+    setCurrentSuggestion(null);
+    setSuggestionLoading(false);
+    setSuggestionError(false);
+    setSelectedFoodForSuggestion(null);
+    console.log('🔄 Reset suggestion card for meal type:', selectedMeal);
+  }, [selectedMeal]);
+
+  // Function to show AI suggestion for a food item using new suggestion service
+  const showFoodSuggestion = async (foodItem) => {
+    try {
+      setSuggestionLoading(true);
+      setSuggestionError(false);
+      setSelectedFoodForSuggestion(foodItem.name);
+      
+      console.log('🔍 showFoodSuggestion called for:', foodItem.name);
+      console.log('🔍 Food item data:', foodItem);
+      
+      // Generate food hash
+      const foodData = {
+        name: foodItem.name,
+        quantity: foodItem.quantity,
+        unit: foodItem.unit,
+        calories: foodItem.calories,
+        protein: foodItem.protein,
+        carbs: foodItem.carbs,
+        fat: foodItem.fat
+      };
+      
+      const foodHash = generateFoodHash(foodData);
+      console.log('🔍 Generated food hash:', foodHash);
+      
+      // Try to get existing suggestion
+      let suggestionData = await getFoodSuggestion(foodHash);
+      
+      if (suggestionData && suggestionData.status) {
+        console.log('✅ Found existing suggestion with status:', suggestionData.status);
+        
+        if (suggestionData.status === 'completed') {
+          console.log('✅ Using completed suggestion');
+          setCurrentSuggestion(suggestionData.suggestion);
+          setSuggestionLoading(false);
+          toast.success('✅ AI analysis loaded from cache');
+          return;
+        } else if (suggestionData.status === 'generating') {
+          console.log('⏳ Suggestion is generating, polling for completion...');
+          toast.success('🤖 AI analysis in progress...');
+          // Poll for completion
+          pollForSuggestionCompletion(foodHash);
+          return;
+        } else if (suggestionData.status === 'failed') {
+          console.log('❌ Previous suggestion failed, generating new one');
+        }
+      } else {
+        console.log('❌ No existing suggestion found, generating new one');
+      }
+
+      // No existing suggestion or failed, generate new one
+      console.log('🤖 Generating new suggestion for:', foodItem.name);
+      toast.success('🤖 Starting AI analysis...');
+      
+      // Calculate current daily intake
+      const dailyIntake = Object.values(meals)
+        .flat()
+        .reduce(
+          (acc, food) => ({
+            calories: acc.calories + (Number(food.calories) || 0),
+            protein: acc.protein + (Number(food.protein) || 0),
+            carbs: acc.carbs + (Number(food.carbs) || 0),
+            fat: acc.fat + (Number(food.fat) || 0),
+          }),
+          { calories: 0, protein: 0, carbs: 0, fat: 0 }
+        );
+
+      console.log('🔍 Daily intake:', dailyIntake);
+      
+      // Start suggestion generation
+      try {
+        suggestionData = await generateFoodSuggestion(foodData, dailyIntake);
+        console.log('✅ Started suggestion generation:', suggestionData);
+        
+        if (suggestionData && suggestionData.status === 'completed') {
+          // Immediate completion
+          console.log('✅ Suggestion completed immediately');
+          setCurrentSuggestion(suggestionData.suggestion);
+          setSuggestionLoading(false);
+          toast.success('✨ AI analysis complete!');
+        } else if (suggestionData && suggestionData.status === 'generating') {
+          // Poll for completion
+          console.log('⏳ Suggestion generating, starting poll');
+          toast.success('🤖 Generating AI analysis...');
+          pollForSuggestionCompletion(foodHash);
+        } else {
+          console.log('❌ Unexpected suggestion data:', suggestionData);
+          setSuggestionError(true);
+          setSuggestionLoading(false);
+          toast.error('Failed to start suggestion generation');
+        }
+      } catch (generateError) {
+        console.error('❌ Failed to start generation:', generateError);
+        throw generateError; // Re-throw to be caught by outer catch
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to show suggestion:', error);
+      setSuggestionError(true);
+      setSuggestionLoading(false);
+      
+      // More specific error messages
+      if (error.message?.includes('API key')) {
+        toast.error('AI analysis unavailable - API key not configured');
+      } else if (error.message?.includes('expired')) {
+        toast.error('AI analysis unavailable - API key expired');
+      } else if (error.message?.includes('profile not found')) {
+        toast.error('Please complete your profile setup first');
+      } else {
+        toast.error('Failed to load food suggestion');
+      }
+    }
+  };
+
+  // Poll for suggestion completion
+  const pollForSuggestionCompletion = async (foodHash, maxAttempts = 30) => {
+    let attempts = 0;
+    
+    const poll = async () => {
+      attempts++;
+      console.log(`🔄 Polling attempt ${attempts}/${maxAttempts} for foodHash:`, foodHash);
+      
+      try {
+        const suggestionData = await getFoodSuggestion(foodHash);
+        console.log(`🔍 Poll result:`, suggestionData);
+        
+        if (suggestionData?.status === 'completed') {
+          console.log('✅ Suggestion completed!');
+          setCurrentSuggestion(suggestionData.suggestion);
+          setSuggestionLoading(false);
+          toast.success('✨ AI analysis saved!');
+          return;
+        } else if (suggestionData?.status === 'failed') {
+          console.log('❌ Suggestion generation failed');
+          setSuggestionError(true);
+          setSuggestionLoading(false);
+          toast.error('AI suggestion generation failed');
+          return;
+        } else if (suggestionData?.status === 'generating') {
+          console.log('⏳ Still generating...');
+        } else {
+          console.log('❓ Unknown status or no data:', suggestionData?.status);
+        }
+        
+        // Continue polling if still generating
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 2000); // Poll every 2 seconds
+        } else {
+          console.log('⏰ Polling timeout reached');
+          setSuggestionError(true);
+          setSuggestionLoading(false);
+          toast.error('Suggestion generation timed out');
+        }
+      } catch (error) {
+        console.error('❌ Polling error:', error);
+        setSuggestionError(true);
+        setSuggestionLoading(false);
+        toast.error('Failed to check suggestion status');
+      }
+    };
+    
+    // Start polling after 1 second
+    setTimeout(poll, 1000);
+  };
 
   // Fetch meals for selected date
   useEffect(() => {
@@ -66,9 +246,14 @@ export default function MealLog() {
           if (entry.items && entry.items.length > 0) {
             organizedMeals[entry.mealType] = entry.items;
             mealEntriesMap[entry.mealType] = entry;
+            
+            // Log suggestion data for debugging
+            const itemsWithSuggestions = entry.items.filter(item => item.suggestion).length;
+            console.log(`🔍 Loaded ${entry.mealType}: ${entry.items.length} items, ${itemsWithSuggestions} with suggestions`);
           }
         });
         
+        console.log('🔍 Organized meals data:', organizedMeals);
         setMeals(organizedMeals);
         setMealEntries(mealEntriesMap);
       } catch (error) {
@@ -92,7 +277,31 @@ export default function MealLog() {
         return;
       }
 
+      // Get the food item before deletion to delete its suggestion
+      const foodItem = meals[mealType][itemIndex];
+      console.log('🗑️ Deleting food item:', foodItem.name);
+
+      // Delete from backend
       await deleteFoodItem(mealEntry._id, itemIndex);
+      
+      // Delete the associated food suggestion
+      try {
+        const foodData = {
+          name: foodItem.name,
+          calories: foodItem.calories,
+          protein: foodItem.protein,
+          carbs: foodItem.carbs,
+          fat: foodItem.fat
+        };
+        const foodHash = generateFoodHash(foodData);
+        console.log('🗑️ Deleting food suggestion for hash:', foodHash);
+        
+        await deleteFoodSuggestion(foodHash);
+        console.log('✅ Food suggestion deleted successfully');
+      } catch (suggestionError) {
+        console.warn('⚠️ Failed to delete food suggestion:', suggestionError.message);
+        // Don't show error to user as this is not critical
+      }
       
       // Update local state
       setMeals(prev => ({
@@ -117,9 +326,11 @@ export default function MealLog() {
           [mealType]: updatedEntry
         };
       });
+
+      toast.success(`${foodItem.name} removed successfully`);
     } catch (error) {
       console.error('Failed to delete food item:', error);
-      // You might want to show an error toast here
+      toast.error('Failed to remove food item');
     }
   };
 
@@ -185,10 +396,12 @@ export default function MealLog() {
         const updatedItems = [...existingMealEntry.items, newFoodItem];
         const updatedMealEntry = await updateMealEntry(existingMealEntry._id, { items: updatedItems });
         
-        // Update local state
+        console.log('🔍 Updated meal entry from backend:', updatedMealEntry);
+        
+        // Update local state with backend data (includes suggestions!)
         setMeals(prev => ({
           ...prev,
-          [selectedMeal]: [...prev[selectedMeal], { ...newFoodItem, id: Date.now() }],
+          [selectedMeal]: updatedMealEntry.items || updatedItems,
         }));
         
         setMealEntries(prev => ({
@@ -196,7 +409,7 @@ export default function MealLog() {
           [selectedMeal]: updatedMealEntry
         }));
         
-        console.log('Updated existing meal entry:', updatedMealEntry);
+        console.log('✅ Updated existing meal entry with suggestions');
       } else {
         // Create new meal entry
         const mealData = {
@@ -205,14 +418,16 @@ export default function MealLog() {
           items: [newFoodItem]
         };
 
-        console.log('Creating new meal entry:', mealData);
+        console.log('🔍 Creating new meal entry:', mealData);
 
         const newMealEntry = await addMealEntry(mealData);
         
-        // Update local state
+        console.log('🔍 New meal entry from backend:', newMealEntry);
+        
+        // Update local state with backend data (includes suggestions!)
         setMeals(prev => ({
           ...prev,
-          [selectedMeal]: [{ ...newFoodItem, id: Date.now() }],
+          [selectedMeal]: newMealEntry.items || [newFoodItem],
         }));
         
         setMealEntries(prev => ({
@@ -220,11 +435,13 @@ export default function MealLog() {
           [selectedMeal]: newMealEntry
         }));
         
-        console.log('Created new meal entry:', newMealEntry);
+        console.log('✅ Created new meal entry with suggestions');
       }
+      
+      toast.success('Food added successfully!');
     } catch (error) {
       console.error('Failed to add food:', error);
-      // You might want to show an error toast here
+      toast.error('Failed to add food item');
     }
     setShowFoodSearch(false);
   };
@@ -364,7 +581,7 @@ export default function MealLog() {
           Meal Logger
         </h1>
         <p className="text-text-muted text-lg">
-          Track your daily nutrition intake
+          Track your daily nutrition intake with AI-powered suggestions
         </p>
       </div>
 
@@ -433,8 +650,10 @@ export default function MealLog() {
             ))}
           </div>
 
-          {/* Current Meal Section */}
-          <div className="bg-dark-200/50 backdrop-blur-lg rounded-2xl p-6 border border-card-border shadow-xl shadow-card-border/20">
+          {/* Current Meal Section - Modified Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Meal Entry Area */}
+            <div className="bg-dark-200/50 backdrop-blur-lg rounded-2xl p-6 border border-card-border shadow-xl shadow-card-border/20">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-text-base flex items-center gap-2 capitalize">
                 <Utensils className="w-6 h-6" />
@@ -489,21 +708,32 @@ export default function MealLog() {
                 {meals[selectedMeal].map((food, index) => (
                   <div
                     key={food.id || index}
-                    className="bg-dark-300/50 rounded-xl p-4 border border-card-border relative group"
+                    onClick={() => showFoodSuggestion(food)}
+                    className="bg-dark-300/50 rounded-xl p-4 border border-card-border relative group cursor-pointer hover:bg-dark-300/70 transition-all duration-200"
                   >
                     <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-semibold text-text-base">
+                      <div className="flex-1 pr-4">
+                        <h3 className="font-semibold text-text-base flex items-center gap-2">
                           {food.name}
+                          <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full">
+                            <Sparkles className="w-3 h-3 inline mr-1" />
+                            AI Ready
+                          </span>
                         </h3>
                         <p className="text-sm text-text-muted">
                           {Number(food.quantity).toFixed(1)} {food.unit}
+                        </p>
+                        <p className="text-xs text-purple-400 mt-1">
+                          Click for AI health analysis
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           className="flex items-center gap-2 p-2 text-text-muted rounded-xl border border-card-border hover:bg-dark-200/50 hover:border-primary-DEFAULT transition"
-                          onClick={() => setEditingFood({ food, index })}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingFood({ food, index });
+                          }}
                           title="Edit quantity"
                         >
                           <Pencil className="text-primary-DEFAULT w-5 h-5" />
@@ -513,9 +743,10 @@ export default function MealLog() {
                         </button>
 
                         <button
-                          onClick={() =>
-                            deleteFoodFromMeal(selectedMeal, index)
-                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteFoodFromMeal(selectedMeal, index);
+                          }}
                           className="relative p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-card-border hover:border-red-500 rounded-lg transition-all duration-200"
                           title="Delete this food item"
                         >
@@ -616,6 +847,17 @@ export default function MealLog() {
                 </div>
               </div>
             )}
+            </div>
+
+            {/* Food Suggestion Card */}
+            <div>
+              <FoodSuggestionCard
+                suggestion={currentSuggestion}
+                loading={suggestionLoading}
+                foodName={selectedFoodForSuggestion}
+                error={suggestionError}
+              />
+            </div>
           </div>
 
           {/* Food Search Modal */}

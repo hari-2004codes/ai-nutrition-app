@@ -68,3 +68,55 @@ export const getMealsByDateRange = async (startDate, endDate) => {
     handleApiError(error, 'getting meals by date range');
   }
 };
+
+// Generate food suggestion using new suggestion service
+export const generateFoodSuggestion = async (foodData, dailyIntake) => {
+  try {
+    const response = await api.post('/food-suggestions/generate', {
+      foodData,
+      dailyIntake
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'generating food suggestion');
+  }
+};
+
+// Get food suggestion by hash
+export const getFoodSuggestion = async (foodHash) => {
+  try {
+    const response = await api.get(`/food-suggestions/${foodHash}`);
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return null; // Suggestion not found
+    }
+    handleApiError(error, 'getting food suggestion');
+  }
+};
+
+// Delete food suggestion
+export const deleteFoodSuggestion = async (foodHash) => {
+  try {
+    const response = await api.delete(`/food-suggestions/${foodHash}`);
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return null; // Suggestion not found (already deleted or never existed)
+    }
+    handleApiError(error, 'deleting food suggestion');
+  }
+};
+
+// Generate food hash (same logic as backend)
+export const generateFoodHash = (foodData) => {
+  const normalizedData = {
+    name: foodData.name.toLowerCase().trim(),
+    calories: Math.round(foodData.calories),
+    protein: Math.round(foodData.protein * 10) / 10,
+    carbs: Math.round(foodData.carbs * 10) / 10,
+    fat: Math.round(foodData.fat * 10) / 10
+  };
+  
+  return btoa(JSON.stringify(normalizedData));
+};

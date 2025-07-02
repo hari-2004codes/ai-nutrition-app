@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, X, Loader2, AlertCircle, Plus } from 'lucide-react';
-import { getFoodAutocomplete, getFoodDetails, parseNutritionData } from '../../services/fatSecretApi';
+import { getFoodAutocomplete, getFoodDetails, parseNutritionData } from '../../services/fatSecretApiBackend';
 import ReactDOM from 'react-dom';
 
 export default function FoodSearch({ onClose, onSelect }) {

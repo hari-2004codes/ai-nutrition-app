@@ -19,13 +19,24 @@ import authRoutes from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
 import diaryRoutes from './routes/diary.js';
 import progressRoutes from './routes/progress.js';
+import foodSuggestionsRouter from './routes/foodSuggestions.js';
+import fatSecretRouter from './routes/fatsecret.js';
+import testRouter from './routes/test.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Allow CORS for development
+// Allow CORS for development and production
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'https://ai-nutrition-app-avgx.onrender.com'],
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:5173', 
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    'https://ai-nutrition-app-avgx.onrender.com',
+    // Add any other Render URLs you might have
+    process.env.FRONTEND_URL
+  ].filter(Boolean), // Remove undefined values
   credentials: true
 }));
 
@@ -48,6 +59,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/diary", diaryRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/food-suggestions', foodSuggestionsRouter);
+app.use('/api/fatsecret', fatSecretRouter);
+app.use('/api/test', testRouter);
 
 import path from 'path';
 app.use(express.static(path.join(process.cwd(), '../dist')));

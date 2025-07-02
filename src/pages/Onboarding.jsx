@@ -146,19 +146,7 @@ export default function Onboarding({ onComplete }) {
         toast.success('Profile created successfully!');
         onComplete();
         
-        // Generate personalized meal plans after onboarding
-        try {
-          console.log('🚀 Generating personalized meal plans...');
-          
-          const mealPlanResponse = await api.post('/mealplans/generate-personalized', {});
-          
-          console.log('✅ Personalized meal plans generated:', mealPlanResponse.data);
-          toast.success('Personalized meal plans generated!');
-        } catch (error) {
-          console.error('❌ Error generating personalized meal plans:', error);
-          // Don't fail onboarding if meal plan generation fails
-          toast.error('Profile created successfully! Meal plans will be generated when you visit the meal plans page.');
-        }
+        // Profile creation completed - user can now explore meal plans manually
         
       } catch (error) {
         console.error('❌ Profile save failed:', error);

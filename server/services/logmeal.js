@@ -12,6 +12,10 @@ export async function recognizeWithSegmentation(filePath) {
     throw new Error('Image file not found');
   }
 
+  if (!process.env.LOGMEAL_API_KEY) {
+    throw new Error('LogMeal API key not configured. Please check your environment variables.');
+  }
+
   const form = new FormData();
   form.append('image', fs.createReadStream(filePath));
 
@@ -26,13 +30,25 @@ export async function recognizeWithSegmentation(filePath) {
         },
         params: {
           language: 'eng'
-        }
+        },
+        timeout: 30000 // 30 second timeout for image processing
       }
     );
     
     return res.data;
   } catch (error) {
     console.error('Image recognition error:', error.response?.data || error.message);
+    
+    if (error.response?.status === 401) {
+      throw new Error('LogMeal API authentication failed. Please check your API key.');
+    } else if (error.response?.status === 403) {
+      throw new Error('LogMeal API access forbidden. Please check your API permissions.');
+    } else if (error.response?.status === 429) {
+      throw new Error('LogMeal API rate limit exceeded. Please try again later.');
+    } else if (error.code === 'ECONNABORTED') {
+      throw new Error('LogMeal API request timeout. Please try with a smaller image.');
+    }
+    
     throw error;
   }
 }

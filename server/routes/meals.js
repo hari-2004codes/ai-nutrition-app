@@ -5,17 +5,23 @@ import {
   confirmMultipleDishes,
   getNutritionForImage,
 } from '../services/logmeal.js';
+import generateFoodSuggestion from '../services/generateFoodSuggestion.js';
+import auth from '../middleware/authMiddleware.js';
+import Profile from '../models/Profile.js';
+import MealEntry from '../models/MealEntry.js';
 
 const router = express.Router();
 
 // Image segmentation
 router.post('/segment', upload.single('image'), async (req, res) => {
+  let filePath = null;
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
-    const result = await recognizeWithSegmentation(req.file.path);
+    filePath = req.file.path;
+    const result = await recognizeWithSegmentation(filePath);
     
     // Check if we got valid results
     if (!result || !result.segmentation_results) {
@@ -30,6 +36,16 @@ router.post('/segment', upload.single('image'), async (req, res) => {
       error: 'Image processing failed',
       details: err.response?.data?.message || err.message 
     });
+  } finally {
+    // Clean up uploaded file
+    if (filePath && require('fs').existsSync(filePath)) {
+      try {
+        require('fs').unlinkSync(filePath);
+        console.log('Cleaned up uploaded file:', filePath);
+      } catch (cleanupErr) {
+        console.error('Failed to cleanup file:', cleanupErr);
+      }
+    }
   }
 });
 
@@ -111,5 +127,59 @@ router.post('/nutrition', express.json(), async (req, res) => {
     });
   }
 });
+
+// Generate food suggestion for a specific food item
+router.post('/suggest', auth, express.json(), async (req, res) => {
+  try {
+    const { foodData, dailyIntake } = req.body;
+    const userId = req.user.userId;
+
+    console.log('🔍 Generate suggestion request:', { 
+      userId, 
+      foodName: foodData?.name,
+      hasProfile: !!req.user 
+    });
+
+    if (!foodData || !foodData.name) {
+      return res.status(400).json({ error: 'Food data is required' });
+    }
+
+    // Get user profile for personalized suggestions
+    const profile = await Profile.findOne({ user: userId });
+    if (!profile) {
+      console.error('❌ No profile found for user:', userId);
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    console.log('✅ Profile found for user:', userId);
+
+    // Prepare user profile data for suggestion
+    const userProfile = {
+      bmr: profile.bmr,
+      tdee: profile.tdee,
+      age: profile.age,
+      gender: profile.gender,
+      activityLevel: profile.activityLevel,
+      goal: profile.goal,
+      preferences: profile.preferences,
+      dailyIntake: dailyIntake || { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    };
+
+    console.log('🤖 Generating suggestion for food:', foodData.name);
+    
+    const suggestion = await generateFoodSuggestion(foodData, userProfile);
+    
+    console.log('✅ Suggestion generated successfully');
+    res.json(suggestion);
+  } catch (err) {
+    console.error('❌ Food suggestion error:', err.message);
+    res.status(500).json({ 
+      error: 'Failed to generate food suggestion',
+      details: err.message
+    });
+  }
+});
+
+
 
 export default router;

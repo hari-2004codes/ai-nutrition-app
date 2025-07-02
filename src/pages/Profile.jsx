@@ -3,38 +3,109 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { User, Target, Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { calculateBMR, calculateTDEE } from '../utils/calculations';
+import profileService from '../services/profileService';
+import authService from '../services/authService';
 
 export default function Profile() {
   const [userData, setUserData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
   useEffect(() => {
-    const stored = localStorage.getItem('nutritionUser');
-    if (stored) {
-      const data = JSON.parse(stored);
-      setUserData(data);
-      reset(data);
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      const profile = await profileService.getProfile();
+      
+      // Map backend field names to frontend field names
+      const mappedData = {
+        name: profile.name,
+        age: profile.age,
+        gender: profile.gender,
+        height: profile.heightCm,
+        weight: profile.weightKg,
+        activityLevel: profile.activityLevel,
+        goal: profile.goal,
+        dietType: profile.preferences,
+        bmr: profile.bmr,
+        tdee: profile.tdee,
+        onboardingCompleted: profile.onboardingCompleted
+      };
+      
+      setUserData(mappedData);
+      reset(mappedData);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      toast.error('Failed to load profile data');
+      
+      // Fallback to localStorage if backend fails
+      const stored = localStorage.getItem('nutritionUser');
+      if (stored) {
+        const data = JSON.parse(stored);
+        setUserData(data);
+        reset(data);
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [reset]);
-
-  const onSubmit = (data) => {
-    const bmr = calculateBMR(data);
-    const tdee = calculateTDEE(bmr, data.activityLevel);
-    
-    const updatedData = {
-      ...data,
-      bmr,
-      tdee,
-      updatedAt: new Date().toISOString(),
-    };
-
-    localStorage.setItem('nutritionUser', JSON.stringify(updatedData));
-    setUserData(updatedData);
-    setIsEditing(false);
-    toast.success('Profile updated successfully!');
   };
+
+  const onSubmit = async (data) => {
+    try {
+      setLoading(true);
+      
+      // Map frontend field names to backend field names
+      const profileData = {
+        name: data.name,
+        age: parseInt(data.age),
+        gender: data.gender,
+        heightCm: parseInt(data.height),
+        weightKg: parseFloat(data.weight),
+        activityLevel: data.activityLevel,
+        goal: data.goal,
+        preferences: data.dietType
+      };
+
+      const updatedProfile = await profileService.updateProfileWithCalculations(profileData);
+      
+      // Map back to frontend format
+      const mappedData = {
+        name: updatedProfile.name,
+        age: updatedProfile.age,
+        gender: updatedProfile.gender,
+        height: updatedProfile.heightCm,
+        weight: updatedProfile.weightKg,
+        activityLevel: updatedProfile.activityLevel,
+        goal: updatedProfile.goal,
+        dietType: updatedProfile.preferences,
+        bmr: updatedProfile.bmr,
+        tdee: updatedProfile.tdee,
+        onboardingCompleted: updatedProfile.onboardingCompleted
+      };
+
+      setUserData(mappedData);
+      setIsEditing(false);
+      toast.success('Profile updated successfully!');
+      
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error(error.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && !userData.name) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-DEFAULT"></div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -137,11 +208,12 @@ export default function Profile() {
             </div>
             <div className="flex justify-end">
               <button
-                type="submit"
-                className="px-6 py-3 bg-primary-DEFAULT/50 text-white rounded-xl hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition-colors"
+              type="submit"
+              disabled={loading}
+                className="px-6 py-3 bg-primary-DEFAULT/50 text-white rounded-xl hover:bg-primary-600 hover:shadow-md hover:shadow-primary-600/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Save Changes
-              </button>
+                {loading ? 'Saving...' : 'Save Changes'}
+            </button>
             </div>
           </form>
         ) : (
@@ -211,7 +283,7 @@ export default function Profile() {
             <div className="p-4 bg-dark-300/60 rounded-xl border border-card-border">
               <div className="font-semibold text-text-base mb-1">Diet Type</div>
               <div className="text-text-muted capitalize">
-                {userData.dietType || 'No specific diet'}
+                {userData.dietType === 'no-preference' ? 'No specific diet' : userData.dietType || 'No specific diet'}
               </div>
             </div>
           </div>

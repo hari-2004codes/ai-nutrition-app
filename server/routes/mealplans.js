@@ -1,11 +1,10 @@
 import express from 'express';
-import generateMealPlan from '../services/generateMealPlan.js'; // Your service to call Groq
+import generateMealPlan from '../services/generateMealPlan.js';
 import { 
   getUserMealPlans, 
   getMealPlan, 
-  generateDefaultMealPlans, 
   generateCustomMealPlan, 
-  updateMealPlan, 
+  saveSampleMealPlan,
   deleteMealPlan 
 } from '../controllers/mealPlanController.js';
 import auth from '../middleware/authMiddleware.js';
@@ -18,17 +17,11 @@ router.get('/', auth, getUserMealPlans);
 // Get a specific meal plan
 router.get('/:id', auth, getMealPlan);
 
-// Generate personalized meal plans (called once during onboarding)
-// router.post('/generate-personalized', auth, generatePersonalizedMealPlans);
-
-// Generate default meal plans
-router.post('/generate-default', auth, generateDefaultMealPlans);
-
 // Generate custom meal plan
 router.post('/generate-custom', auth, generateCustomMealPlan);
 
-// Update meal plan
-router.put('/:id', auth, updateMealPlan);
+// Save sample/placeholder meal plan
+router.post('/save-sample', auth, saveSampleMealPlan);
 
 // Delete meal plan
 router.delete('/:id', auth, deleteMealPlan);

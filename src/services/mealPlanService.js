@@ -23,32 +23,17 @@ class MealPlanService {
     }
   }
 
-  // Generate 6 default meal plans based on user profile
-  async generateDefaultMealPlans() {
+  // Save sample meal plan
+  async saveSampleMealPlan(planData, planName, planDescription) {
     try {
-      const response = await api.post('/mealplans/generate-default');
+      const response = await api.post('/mealplans/save-sample', {
+        planData,
+        planName,
+        planDescription
+      });
       return response.data;
     } catch (error) {
-      console.error('Error generating default meal plans:', error);
-      throw error;
-    }
-  }
-
-  // Check if user has default meal plans and generate if needed
-  async ensureDefaultMealPlans() {
-    try {
-      const response = await this.getUserMealPlans();
-      const plans = response.data || [];
-      const defaultPlans = plans.filter(plan => plan.planType === 'default');
-      
-      if (defaultPlans.length === 0) {
-        console.log('No default meal plans found, generating...');
-        return await this.generateDefaultMealPlans();
-      }
-      
-      return { data: defaultPlans };
-    } catch (error) {
-      console.error('Error ensuring default meal plans:', error);
+      console.error('Error saving sample meal plan:', error);
       throw error;
     }
   }
@@ -64,16 +49,7 @@ class MealPlanService {
     }
   }
 
-  // Update meal plan
-  async updateMealPlan(id, updates) {
-    try {
-      const response = await api.put(`/mealplans/${id}`, updates);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating meal plan:', error);
-      throw error;
-    }
-  }
+  // Function removed - no longer supporting meal plan updates
 
   // Delete meal plan
   async deleteMealPlan(id) {

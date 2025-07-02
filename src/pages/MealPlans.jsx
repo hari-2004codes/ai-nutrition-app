@@ -122,9 +122,9 @@ export default function MealPlans() {
     };
   };
 
-  const displayPlans = allMealPlans.length > 0
-    ? allMealPlans
-    : allPlaceholderPlans.map(getPlaceholderCard);
+  // Always show both custom plans and placeholder plans
+  const placeholderPlans = allPlaceholderPlans.map(getPlaceholderCard);
+  const displayPlans = [...allMealPlans, ...placeholderPlans];
 
   return (
     <div className="p-6 space-y-8">
@@ -148,40 +148,64 @@ export default function MealPlans() {
         </button>
       </div>
 
-      {/* Custom Plans Section */}
+      {/* All Plans Section */}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-text-base">Custom Plans</h2>
+          <h2 className="text-2xl font-bold text-text-base">All Meal Plans</h2>
           <span className="text-text-muted text-sm">
             {displayPlans.length} plan{displayPlans.length !== 1 ? 's' : ''}
           </span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayPlans.length > 0 ? displayPlans.map((plan) => (
-            <MealPlanCard 
-              key={plan.id} 
-              plan={plan} 
-              onSelect={setSelectedMealPlan}
-            />
-          )) : (
-            <div className="text-center py-12 col-span-full">
-              <div className="bg-dark-200/50 rounded-2xl p-8 border border-card-border max-w-md mx-auto">
-                <BookOpen className="w-16 h-16 text-text-muted mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-text-base mb-2">No Meal Plans Yet</h3>
-                <p className="text-text-muted mb-6">
-                  Start by creating your first meal plan.
-                </p>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  disabled={isGenerating}
-                  className="px-6 py-3 bg-dark-300 text-text-base rounded-xl hover:bg-dark-400 transition-all duration-300 disabled:opacity-50"
-                >
-                  Create Custom Plan
-                </button>
-              </div>
+
+        {/* Custom Plans Section */}
+        {allMealPlans.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-text-base">Your Custom Plans</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {allMealPlans.map((plan) => (
+                <MealPlanCard 
+                  key={plan.id} 
+                  plan={plan} 
+                  onSelect={setSelectedMealPlan}
+                />
+              ))}
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Sample Plans Section */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-text-base">Sample Plans</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {placeholderPlans.map((plan) => (
+              <MealPlanCard 
+                key={plan.id} 
+                plan={plan} 
+                onSelect={setSelectedMealPlan}
+              />
+            ))}
+          </div>
         </div>
+
+        {/* Empty State for Custom Plans */}
+        {allMealPlans.length === 0 && (
+          <div className="text-center py-8">
+            <div className="bg-dark-200/50 rounded-2xl p-8 border border-card-border max-w-md mx-auto">
+              <BookOpen className="w-16 h-16 text-text-muted mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-text-base mb-2">No Custom Plans Yet</h3>
+              <p className="text-text-muted mb-6">
+                Start by creating your first custom meal plan to see it here alongside our sample plans.
+              </p>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                disabled={isGenerating}
+                className="px-6 py-3 bg-dark-300 text-text-base rounded-xl hover:bg-dark-400 transition-all duration-300 disabled:opacity-50"
+              >
+                Create Custom Plan
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modals */}

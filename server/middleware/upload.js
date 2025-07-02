@@ -1,14 +1,26 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 
-// Configure storage: files go to /uploads with original filename
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('Created uploads directory:', uploadsDir);
+}
+
+// Configure storage: files go to /uploads with unique filename
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(process.cwd(), 'uploads'));
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    // preserve original name; you could also generate a unique one
-    cb(null, file.originalname);
+    // Generate unique filename to avoid conflicts
+    const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 10000);
+    const extension = path.extname(file.originalname);
+    const filename = `${timestamp}-${randomNum}${extension}`;
+    cb(null, filename);
   }
 });
 

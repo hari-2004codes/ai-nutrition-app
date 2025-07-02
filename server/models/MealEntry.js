@@ -17,6 +17,17 @@ const mealEntrySchema = new mongoose.Schema({
     protein: { type: Number, required: true },
     carbs: { type: Number, required: true },
     fat: { type: Number, required: true },
+    
+    // AI-generated suggestions
+    suggestion: {
+      healthiness: { type: String }, // e.g., "Excellent", "Good", "Fair", "Poor"
+      recommendation: { type: String }, // personalized recommendation text
+      tips: [{ type: String }], // array of tips
+      alternatives: [{ type: String }], // suggested healthier alternatives
+      portion: { type: String }, // portion size feedback
+      timing: { type: String }, // meal timing feedback
+      generatedAt: { type: Date, default: Date.now }
+    }
   }],
 
   // meal summary (calculated values)
