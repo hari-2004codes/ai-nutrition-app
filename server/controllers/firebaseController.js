@@ -1,17 +1,23 @@
 import admin from 'firebase-admin';
-import { readFile } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import User from '../models/User.js'; 
 import Profile from '../models/Profile.js';
 import { signToken } from '../utils/jwt.js'; 
+import { readFileSync } from 'fs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+let serviceAccount;
 
-const keyPath = path.join(__dirname, '../serviceAccountKey.json');
-const keyBuffer = await readFile(keyPath, 'utf8');
-const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+if (process.env.GOOGLE_SERVICE_ACCOUNT) {
+  
+  serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+} else {
+  
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const keyPath = path.join(__dirname, '../serviceAccountKey.json');
+  serviceAccount = JSON.parse(readFileSync(keyPath, 'utf8'));
+}
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
