@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 
 const keyPath = path.join(__dirname, '../serviceAccountKey.json');
 const keyBuffer = await readFile(keyPath, 'utf8');
-const serviceAccount = JSON.parse(keyBuffer);
+const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
