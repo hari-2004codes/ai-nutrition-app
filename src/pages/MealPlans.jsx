@@ -162,11 +162,12 @@ export default function MealPlans() {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-text-base">Your Custom Plans</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {allMealPlans.map((plan) => (
+              {allMealPlans.map((plan, idx) => (
                 <MealPlanCard 
                   key={plan.id} 
                   plan={plan} 
                   onSelect={setSelectedMealPlan}
+                  index={idx}
                 />
               ))}
             </div>
@@ -177,11 +178,12 @@ export default function MealPlans() {
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-text-base">Sample Plans</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {placeholderPlans.map((plan) => (
+            {placeholderPlans.map((plan, idx) => (
               <MealPlanCard 
                 key={plan.id} 
                 plan={plan} 
                 onSelect={setSelectedMealPlan}
+                index={allMealPlans.length + idx}
               />
             ))}
           </div>
@@ -225,8 +227,10 @@ export default function MealPlans() {
   );
 }
 
-// Meal Plan Card Component
-function MealPlanCard({ plan, onSelect }) {
+// List of local images to use for meal plan cards
+const mealPlanImages = ['/food_1.jpg', '/food_2.jpg', '/food_3.jpg'];
+
+function MealPlanCard({ plan, onSelect, index }) {
   if (!plan || !plan.name || !plan.duration || !plan.planType || !Array.isArray(plan.data) || plan.data.length === 0) {
     return (
       <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl">
@@ -234,8 +238,8 @@ function MealPlanCard({ plan, onSelect }) {
       </div>
     );
   }
-  // Fallback image if plan.image is missing
-  const fallbackImage = 'https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg';
+  // Cycle through the 3 images for each card
+  const fallbackImage = mealPlanImages[index % mealPlanImages.length];
   const imageUrl = plan.image && plan.image.trim() ? plan.image : fallbackImage;
   return (
     <div

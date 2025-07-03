@@ -9,6 +9,7 @@ import generateFoodSuggestion from '../services/generateFoodSuggestion.js';
 import auth from '../middleware/authMiddleware.js';
 import Profile from '../models/Profile.js';
 import MealEntry from '../models/MealEntry.js';
+import fs from 'fs';
 
 const router = express.Router();
 
@@ -38,9 +39,9 @@ router.post('/segment', upload.single('image'), async (req, res) => {
     });
   } finally {
     // Clean up uploaded file
-    if (filePath && require('fs').existsSync(filePath)) {
+    if (filePath && fs.existsSync(filePath)) {
       try {
-        require('fs').unlinkSync(filePath);
+        fs.unlinkSync(filePath);
         console.log('Cleaned up uploaded file:', filePath);
       } catch (cleanupErr) {
         console.error('Failed to cleanup file:', cleanupErr);
